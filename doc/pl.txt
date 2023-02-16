@@ -1,0 +1,44 @@
+1a. 
+
+N nb villes
+s ville départ
+t ville arrivée (s!=t)
+D_ij distance de i à j
+
+A_ij   =1 ssi on prend le chemin de i à j
+
+min sum(A_ij*D_ij)
+
+
+
+1b. TSP
+
+N nb villes
+D_ij distance de i à j
+
+A_ij =1 ssi on prend le chemin de i à j
+
+min sum(A_ij*D_ij)
+
+
+
+2.
+
+N nb villes
+s ville départ
+t ville arrivée (s!=t)
+D_ij distance de i à j
+v vitesse de vol
+c capacité de l'avion
+t0 heure de départ
+T1 heure de tombée de la nuit
+T2 heure de levé du jour
+N_i =1 ssi ville au nord
+S_i =1 ssi ville au sud
+E_i =1 ssi ville au est
+W_i =1 ssi ville au west
+R_i =1 ssi rechargement possible de nuit
+
+A_ij =1 ssi on prend le chemin de i à j
+
+min sum(A_ij*D_ij/v)   ~   min sum(A_ij/D_ij)
