@@ -195,7 +195,7 @@ TEST(TestBreitling, TestConstraintsSatified)
   static_assert(stations.size() == expectedRegions.size());
 
   for (size_t i = 0; i < stations.size(); i++) {
-    for (size_t r = 0; r < breitling_constraints::MANDATORY_REGION_COUNT; r++) {
+    for (unsigned char r = 0; r < breitling_constraints::MANDATORY_REGION_COUNT; r++) {
       if (r == expectedRegions[i])
         EXPECT_TRUE(breitling_constraints::isStationInMandatoryRegion(*stations[i], r)) << "station " << i << " region " << r;
       else
