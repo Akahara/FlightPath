@@ -166,7 +166,7 @@ TEST(TestBreitling, TestConstraints)
     for (size_t i = 0; i < 10; i++) {
         path3.getStations().push_back(&s1);
         path3.getStations().push_back(&s3);
-    }
+}
 
     EXPECT_FALSE(breitling_constraints::satisfiesRegionsConstraints(path1));
     EXPECT_FALSE(breitling_constraints::satisfiesStationCountConstraints(path1));

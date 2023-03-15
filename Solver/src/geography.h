@@ -19,6 +19,14 @@ constexpr cardinal_t NE = N | E, NW = N | W, SE = S | E, SW = S | W;
 
 }
 
+// Cardinals, can be considered a bitwise enum
+namespace Card {
+
+constexpr cardinal_t N = 0, S = 1, E = 2, W = 4;
+constexpr cardinal_t NE = N | E, NW = N | W, SE = S | E, SW = S | W;
+
+}
+
 // A (longitude latitude) pair, in degrees
 // both .lon and .longitude can be used to refer to the location's longitude
 // the same goes for latitude with .lat and .latitude

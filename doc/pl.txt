@@ -19,6 +19,7 @@ sum_j(A_tj)=1
 N nb villes
 M nb villes à visiter au min
 s ville départ
+t ville arrivée (s!=t)
 D_ij distance de i à j
 v vitesse de vol
 c capacité -en temps- de l'avion
