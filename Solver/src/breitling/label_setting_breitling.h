@@ -11,14 +11,50 @@
 #include <array>
 
 #include "BreitlingSolver.h"
+#include "../geometry.h"
 
 typedef uint32_t fragmentidx_t;
 typedef uint8_t stationidx_t;
 typedef float time_t;
+typedef time_t distance_t;
+typedef uint8_t region_t; // bit field, 0b1010 means that the 2nd and 4th regions have been visited
+
+namespace utils {
+
+template<typename T>
+constexpr unsigned char count1bits(T x)
+{
+  unsigned char c = 0;
+  while (x) {
+    c += x & 1;
+    x >>= 1;
+  }
+  return c;
+}
+
+template<size_t S>
+constexpr std::array<unsigned char, S> createBitCountLookupTable()
+{
+  std::array<unsigned char, S> lookupTable;
+  for (size_t i = 0; i < S; i++)
+    lookupTable[i] = count1bits(i);
+  return lookupTable;
+}
+
+static constexpr std::array BIT_COUNT_LOOKUP_TABLE = createBitCountLookupTable<1 << (breitling_constraints::REGION_COUNT-1)>();
+
+// Returns the number of visited regions in a region bit field
+// ie. 0b1010 represents regions 2 & 4 being visited, countRegions(0b1010) = 2
+static unsigned char countRegions(region_t regionsBitField)
+{
+  return BIT_COUNT_LOOKUP_TABLE[regionsBitField];
+}
+
+}
 
 struct PathFragment {
 private:
-  uint16_t packedStationUseCount;
+  uint16_t packedStationUseCount; // 9 bits for the station (up to 512) and 7 bits for the use count (up to 127 immediate children + 1 immediate use)
   fragmentidx_t previousFragmentIdx;
 
 public:
@@ -109,10 +145,112 @@ private:
   }
 };
 
+struct LimitedAdjency {
+  distance_t distance;
+  stationidx_t station;
+};
+
+class PartialAdjencyMatrix {
+private:
+  std::vector<std::vector<LimitedAdjency>> m_adjencyMatrix; // NxM matrix M<<N
+  std::vector<distance_t> m_distanceToTarget; // 1xN matrix, the distances to the target station must be kept somehow
+
+public:
+  inline size_t adjencyCount(stationidx_t station)
+  {
+    return m_adjencyMatrix[station].size();
+  }
+
+  inline stationidx_t getAdjencyNextStation(stationidx_t currentStation, size_t idx)
+  {
+    return m_adjencyMatrix[currentStation][idx].station;
+  }
+
+  inline stationidx_t getAdjencyNextDistance(stationidx_t currentStation, size_t idx)
+  {
+    return m_adjencyMatrix[currentStation][idx].distance;
+  }
+
+  inline distance_t distanceToTargetStation(stationidx_t fromStation)
+  {
+    return m_distanceToTarget[fromStation];
+  }
+};
+
+class FullAdjencyMatrix {
+private:
+  std::vector<distance_t> m_adjencyMatrix; // unrolled NxN matrix
+  size_t                  m_nodeCount;
+  const BreitlingData    *m_breitlingData;
+  // TODO could be stored as a triangle "matrix" (only half of it) because the NxN matrix is symetric, todo is to check performances
+
+public:
+  FullAdjencyMatrix(const GeoMap &geomap, const BreitlingData *breitlingData)
+    : m_nodeCount(geomap.getStations().size()), m_breitlingData(&breitlingData)
+  {
+    m_adjencyMatrix.resize(m_nodeCount * m_nodeCount);
+    for (size_t i = 0; i < m_nodeCount; i++) {
+      for (size_t j = i; j < m_nodeCount; j++) {
+        nauticmiles_t realDistance = geometry::distance(geomap.getStations()[i].getLocation(), geomap.getStations()[j].getLocation());
+        time_t timeDistance = realDistance / 4; // TODO
+        m_adjencyMatrix[i + j * m_nodeCount] = m_adjencyMatrix[i * m_nodeCount + j] = timeDistance;
+      }
+    }
+  }
+
+  inline size_t adjencyCount(stationidx_t station)
+  {
+    return m_adjencyMatrix.size();
+  }
+
+  inline stationidx_t getAdjencyNextStation(stationidx_t currentStation, size_t idx)
+  {
+    return idx;
+  }
+
+  inline stationidx_t getAdjencyNextDistance(stationidx_t currentStation, size_t idx)
+  {
+    return m_adjencyMatrix[currentStation][idx];
+  }
+
+  inline distance_t distanceToTargetStation(stationidx_t fromStation)
+  {
+    return m_adjencyMatrix[m_adjencyMatrix.size()-1][fromStation];
+  }
+};
+
+#if 1
+typedef FullAdjencyMatrix AdjencyMatrix;
+#else
+typedef PartialAdjencyMatrix AdjencyMatrix;
+#endif
+
 class LabelSetting {
 private:
-  FragmentsArena m_fragments = FragmentsArena(100'000); // start with min. 100k fragments, it will surely grow during execution
-  size_t stationCount;
+  static constexpr size_t STATION_TO_VISIT_COUNT = breitling_constraints::MINIMUM_STATION_COUNT;
+
+  //size_t                m_stationCount;
+  FragmentsArena        m_fragments = FragmentsArena(100'000); // start with min. 100k fragments, it will surely grow during execution
+  AdjencyMatrix         m_adjencyMatrix;
+  std::vector<region_t> m_stationRegions;
+  const GeoMap         *m_geomap;
+
+public:
+  LabelSetting(const GeoMap &geomap, const BreitlingData &breitlingData)
+    : m_geomap(&geomap), m_adjencyMatrix(geomap, &breitlingData)
+  {
+    size_t stationCount = geomap.getStations().size();
+
+    m_stationRegions.resize(stationCount);
+    for (size_t i = 0; i < stationCount; i++) {
+      for (region_t r = 0; r < breitling_constraints::REGION_COUNT; r++) {
+        if (breitling_constraints::isStationInMandatoryRegion(geomap.getStations()[i], r)) {
+          m_stationRegions[i] = r;
+          break;
+        }
+      }
+    }
+  }
 
 private:
   time_t lowerBound(const Label &label)
@@ -122,14 +260,28 @@ private:
 
   void explore(const Label &source, time_t currentBestTime, std::vector<Label> &explorationLabels)
   {
-    // TODO implement
-    // (fill explorationLabels)
-  }
+    PathFragment &currentFragment = m_fragments[source.lastFragmentIdx];
+    stationidx_t currentStation = currentFragment.getStationIdx();
+    for (size_t i = 0; i < m_adjencyMatrix.adjencyCount(currentStation); i++) {
+      stationidx_t nextStationIdx = m_adjencyMatrix.getAdjencyNextStation(currentStation, i);
+      //const Station &nextStation = m_geomap->getStations()[nextStationIdx];
+      distance_t distanceToNext = m_adjencyMatrix.getAdjencyNextDistance(currentStation, i);
+      region_t newLabelVisitedRegions = source.visitedRegions | m_stationRegions[nextStationIdx];
 
-  Label appendStationToPath(Label label, stationidx_t stationIdx)
-  {
-    // TODO implement
-    return label;
+      if (distanceToNext > source.currentFuel)
+        continue; // not enough fuel
+      if (STATION_TO_VISIT_COUNT - source.visitedStationCount > utils::countRegions(newLabelVisitedRegions))
+        continue; // 3 regions left to visit but only 2 more stations to go through
+
+      { // without refuel
+        Label &explorationLabel = explorationLabels.emplace_back(source); // copy the source
+        explorationLabel.currentFuel -= distanceToNext;
+        explorationLabel.currentTime += distanceToNext;
+        explorationLabel.visitedRegions = newLabelVisitedRegions;
+        explorationLabel.visitedStationCount++;
+        explorationLabel.lastFragmentIdx = m_fragments.emplace(source.lastFragmentIdx, nextStationIdx);
+      }
+    }
   }
 
   bool dominates(Label &dominating, Label &dominated)
@@ -140,21 +292,19 @@ private:
 
   Path reconstitutePath(fragmentidx_t lastFragment)
   {
-    Station **stations; // TODO have a GeoMap in LabelSetting
-    // this variable exists until then, for the rest of the code to build
-
     Path path;
     path.getStations().resize(breitling_constraints::MINIMUM_STATION_COUNT);
 
     // build in reverse
     for (int i = path.size() - 1; i >= 0; i--) {
-      path.getStations()[i] = stations[m_fragments[lastFragment].getStationIdx()];
+      path.getStations()[i] = &m_geomap->getStations()[m_fragments[lastFragment].getStationIdx()];
       lastFragment = m_fragments[lastFragment].getPreviousFragment();
     }
 
     return path;
   }
 
+public:
   Path labelSetting()
   {
     time_t bestTime = std::numeric_limits<time_t>::max();
@@ -177,15 +327,18 @@ private:
       if (explorationLabels.size() > 0) {
         for (Label nextLabel : explorationLabels) {
           if (nextLabel.visitedStationCount == breitling_constraints::MINIMUM_STATION_COUNT - 1) {
-            // complete the path and check against the best one found so far
-            Label completed = appendStationToPath(nextLabel, stationCount-1);
-            if (completed.currentTime < bestTime) {
-              bestTime = completed.currentTime;
-              if (bestPath != -1) m_fragments.release(bestPath);
-              bestPath = completed.lastFragmentIdx;
+            // only 1 station remaining, try to complete the path
+            distance_t distanceToComplete = m_adjencyMatrix.distanceToTargetStation(m_fragments[nextLabel.lastFragmentIdx].getStationIdx());
+            if (nextLabel.currentFuel > distanceToComplete &&
+                nextLabel.currentTime + distanceToComplete < bestTime) {
+              // path is completeable and better than the best one found so far
+              stationidx_t lastStation = m_geomap->getStations().size() - 1;
+              if (bestPath != -1)
+                m_fragments.release(bestPath);
+              bestPath = m_fragments.emplace(nextLabel.lastFragmentIdx, lastStation);
             }
           } else {
-            // remove dominated labels // TODO it is probably not necessary to filter once per new label, doing it a single time is probably enough (todo is check that theory before changing the code)
+            // remove dominated labels
             auto it = openLabels.begin();
             while (it != openLabels.end()) {
               if (dominates(nextLabel, *it)) {
