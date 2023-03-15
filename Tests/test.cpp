@@ -1,10 +1,12 @@
 #include "pch.h"
 
 #include <random>
+#include <array>
 
 #include "../Solver/src/geomap.h"
 #include "../Solver/src/geometry.h"
 #include "../Solver/src/tsp/TspSolver.h"
+#include "../Solver/src/tsp/genetictsp.h"
 #include "../Solver/src/breitling/BreitlingSolver.h"
 
 TEST(TestLocationCase, TestConstructors)
@@ -47,7 +49,7 @@ TEST(TestPath, TestCreation)
     p.getStations().push_back(&s3);
     p.getStations().push_back(&s4);
     ASSERT_EQ(p.size(), 4);
-    EXPECT_FLOAT_EQ(p.length(),
+    EXPECT_DOUBLE_EQ(p.length(),
                     geometry::distance(s1.getLocation(), s2.getLocation()) +
                     geometry::distance(s2.getLocation(), s3.getLocation()) +
                     geometry::distance(s3.getLocation(), s4.getLocation()));
@@ -82,11 +84,11 @@ static GeoMap genDummyMap()
     return map;
 }
 
-static GeoMap genPredictableLargeMap(size_t stationCount, double seed=0)
+static GeoMap genPredictableLargeMap(size_t stationCount, unsigned int seed=0)
 {
     std::mt19937 engine{ seed };
-    std::uniform_int_distribution<double> random{ 0, 360 };
-    std::vector<double> positions;
+    std::uniform_real_distribution<double> random{ 0., 360. };
+    std::vector<double> positions(stationCount*2);
     std::generate(positions.begin(), positions.end(), [&random, &engine]() { return random(engine); });
 
     GeoMap map;
@@ -96,12 +98,15 @@ static GeoMap genPredictableLargeMap(size_t stationCount, double seed=0)
     return map;
 }
 
+//using TestedTSPSolver = GeneticTSPSolver;
+using TestedTSPSolver = TSPSolver;
+
 TEST(TestTSP, TestDummy)
 {
     GeoMap map = genDummyMap();
 
-    TSPSolver solver;
-    Path path = solver.solveForPath(map);
+    std::unique_ptr<PathSolver> solver = std::make_unique<TestedTSPSolver>();
+    Path path = solver->solveForPath(map);
     ASSERT_EQ(map.getStations().size(), path.size());
     ASSERT_TRUE(geometry::isCycle(path));
 
@@ -116,8 +121,8 @@ TEST(TestTSP, TestLarge)
 {
     GeoMap map = genPredictableLargeMap(100); // 100 stations
 
-    TSPSolver solver;
-    Path path = solver.solveForPath(map);
+    std::unique_ptr<PathSolver> solver = std::make_unique<TestedTSPSolver>();
+    Path path = solver->solveForPath(map);
     ASSERT_EQ(map.getStations().size(), path.size());
     ASSERT_TRUE(geometry::isCycle(path));
 
@@ -130,6 +135,78 @@ TEST(TestTSP, TestLarge)
             std::swap(path.getStations()[i], path.getStations()[j]);
         }
     }
+}
+
+TEST(TestBreitling, TestConstraints)
+{
+    Station s1{ Location{0,0}   };
+    Station s2{ Location{1,1}   };
+    Station s3{ Location{180,0} };
+    BreitlingData dataset{};
+    dataset.nauticalDaytime   = 8;   // day starts at 8am
+    dataset.nauticalNighttime = 20;  // night falls at 8pm
+    dataset.departureTime     = 8;   // the course starts at 8am
+    dataset.planeFuelCapacity = 100; // arbitrary capacity, 100 is nice because it can be interpreted as a percentage
+    dataset.planeFuelUsage    = 10;  // 10% per hour
+    dataset.planeSpeed        = 100; // 100nm/h
+    dataset.departureStation  = &s1;
+    dataset.targetStation     = &s2;
+
+    Path path1;
+    path1.getStations().push_back(&s1);
+    path1.getStations().push_back(&s2);
+
+    Path path2;
+    for (size_t i = 0; i < 50; i++) {
+        path2.getStations().push_back(&s1);
+        path2.getStations().push_back(&s2);
+    }
+
+    Path path3;
+    for (size_t i = 0; i < 10; i++) {
+        path3.getStations().push_back(&s1);
+        path3.getStations().push_back(&s3);
+    }
+
+    EXPECT_FALSE(breitling_constraints::satisfiesRegionsConstraints(path1));
+    EXPECT_FALSE(breitling_constraints::satisfiesStationCountConstraints(path1));
+    EXPECT_TRUE(breitling_constraints::satisfiesFuelConstraints(dataset, path1));
+    EXPECT_TRUE(breitling_constraints::satisfiesPathConstraints(dataset, path1));
+    EXPECT_TRUE(breitling_constraints::satisfiesTimeConstraints(dataset, path1));
+    EXPECT_FALSE(breitling_constraints::isPathValid(dataset, path1));
+
+    EXPECT_FALSE(breitling_constraints::satisfiesStationCountConstraints(path2)); // count only distinct stations
+    EXPECT_FALSE(breitling_constraints::satisfiesFuelConstraints(dataset, path3)); // very large gaps cannot be crossed without enough fuel
+    EXPECT_FALSE(breitling_constraints::satisfiesTimeConstraints(dataset, path3)); // very long paths cannot last less than the imparted time
+}
+
+TEST(TestBreitling, TestConstraintsSatified)
+{
+  Station sNE{ Location{6.2,48.7} };
+  Station sNW{ Location{-2,48} };
+  Station sSE{ Location{7,43} };
+  Station sSW{ Location{-1,44} };
+  Station sC{ Location{2.3,47} };
+
+  static_assert(breitling_constraints::MANDATORY_REGION_COUNT == 4, "test was written assuming there was 4 regions, station locations must change accordingly");
+
+  std::array stations       { &sNW, &sSW, &sSE, &sNE, &sC };
+  std::array expectedRegions{ 0,    1,    2,    3,    -1  };
+  static_assert(stations.size() == expectedRegions.size());
+
+  for (size_t i = 0; i < stations.size(); i++) {
+    for (size_t r = 0; r < breitling_constraints::MANDATORY_REGION_COUNT; r++) {
+      if (r == expectedRegions[i])
+        EXPECT_TRUE(breitling_constraints::isStationInMandatoryRegion(*stations[i], r)) << "station " << i << " region " << r;
+      else
+        EXPECT_FALSE(breitling_constraints::isStationInMandatoryRegion(*stations[i], r)) << "station " << i << " region " << r;
+    }
+  }
+
+  Path path;
+  path.getStations().insert(path.getStations().end(), stations.begin(), stations.end());
+
+  EXPECT_TRUE(breitling_constraints::satisfiesRegionsConstraints(path));
 }
 
 TEST(TestBreitling, TestPredictable)
@@ -150,7 +227,7 @@ TEST(TestBreitling, TestPredictable)
 
     EXPECT_TRUE(breitling_constraints::isPathValid(dataset, path)); // check all constraints at once
 
-    EXPECT_TRUE(breitling_constraints::satisfiesCardinalsConstraints(path));
+    EXPECT_TRUE(breitling_constraints::satisfiesRegionsConstraints(path));
     EXPECT_TRUE(breitling_constraints::satisfiesFuelConstraints(dataset, path));
     EXPECT_TRUE(breitling_constraints::satisfiesPathConstraints(dataset, path));
     EXPECT_TRUE(breitling_constraints::satisfiesStationCountConstraints(path));
@@ -160,15 +237,15 @@ TEST(TestBreitling, TestPredictable)
 TEST(TestBreitling, TestLarge)
 {
     BreitlingData dataset{};
-    dataset.nauticalDaytime = 8;   // day starts at 8am
+    dataset.nauticalDaytime   = 8;   // day starts at 8am
     dataset.nauticalNighttime = 20;  // night falls at 8pm
-    dataset.departureTime = 8;   // the course starts at 8am
+    dataset.departureTime     = 8;   // the course starts at 8am
     dataset.planeFuelCapacity = 100; // arbitrary capacity, 100 is nice because it can be interpreted as a percentage
-    dataset.planeFuelUsage = 10;  // 10% per hour
-    dataset.planeSpeed = 100; // 100nm/h
+    dataset.planeFuelUsage    = 10;  // 10% per hour
+    dataset.planeSpeed        = 100; // 100nm/h
 
     for (size_t i = 0; i < 20; i++) {
-        double seed = rand();
+        unsigned int seed = rand();
         GeoMap map = genPredictableLargeMap(200, seed);
         dataset.departureStation = &map.getStations()[0];
         dataset.targetStation = &map.getStations()[1];
@@ -178,7 +255,7 @@ TEST(TestBreitling, TestLarge)
 
         EXPECT_TRUE(breitling_constraints::isPathValid(dataset, path)) << "with seed " << seed; // check all constraints at once
 
-        EXPECT_TRUE(breitling_constraints::satisfiesCardinalsConstraints(path));
+        EXPECT_TRUE(breitling_constraints::satisfiesRegionsConstraints(path));
         EXPECT_TRUE(breitling_constraints::satisfiesFuelConstraints(dataset, path));
         EXPECT_TRUE(breitling_constraints::satisfiesPathConstraints(dataset, path));
         EXPECT_TRUE(breitling_constraints::satisfiesStationCountConstraints(path));

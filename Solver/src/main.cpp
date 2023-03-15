@@ -1,31 +1,49 @@
 #include <iostream>
 
-#include "../vendor/OpenXLSX/OpenXLSX.hpp"
-
 #include "geomap.h"
 #include "geometry.h"
+#include "tsp/genetictsp.h"
 
 int main()
 {
-    using namespace OpenXLSX;
+    GeoMap map;
 
-    XLDocument doc;
-    doc.create("Spreadsheet.xlsx");
-    auto wks = doc.workbook().worksheet("Sheet1");
+    size_t T = 10;
+    for (size_t x = 0; x < T; x++)
+        for (size_t y = 0; y < T; y++)
+            map.getStations().push_back(Station{ Location{(double)x,(double)y} });
 
-    wks.cell("A1").value() = "Hello, OpenXLSX!";
+    std::unique_ptr<PathSolver> solver = std::make_unique<GeneticTSPSolver>();
+    Path path = solver->solveForPath(map);
 
-    doc.save();
-    doc.close();
+    for (size_t i = 0; i < path.size(); i++) {
+        std::cout << i << "\t" << path[i].getLocation().lon << " " << path[i].getLocation().lat << std::endl;
+    }
 
-    XLDocument d2;
-    d2.open("Spreadsheet.xlsx");
-    for (const auto &name : d2.workbook().worksheetNames())
-        std::cout << name << std::endl;
-    std::string name = d2.workbook().worksheetNames()[0];
-    std::cout << "opening " << name << std::endl;
-    auto wk2 = d2.workbook().worksheet(name);
-    std::cout << wk2.cell("A1").value().get<std::string>() << std::endl;
+    double l = 0;
+    for (size_t i = 0; i < path.size(); i++) {
+        Location l1 = path[i].getLocation();
+        Location l2 = path[(i+1)%path.size()].getLocation();
+        l += std::sqrt((l1.lon - l2.lon) * (l1.lon - l2.lon) + (l1.lat - l2.lat) * (l1.lat - l2.lat));
+    }
+    std::cout << "total length " << l << " (optimal="<<T*T<<")" << std::endl;
+
+    for (size_t y = 0; y < T; y++) {
+        for (size_t x = 0; x < T; x++) {
+            std::cout << (int)(std::find_if(path.getStations().begin(), path.getStations().end(), [x, y](const auto *s) { return s->getLocation().lon == x && s->getLocation().lat == y; }) - path.getStations().begin()) << "\t";
+        }
+        std::cout << "\n\n";
+    }
+    std::cout.flush();
+
+    std::cout << "<svg viewBox=\"0 0 " << T << " " << T << "\" xmlns=\"http://www.w3.org/2000/svg\">";
+    for (size_t i = 0; i < path.size(); i++) {
+        Location l1 = path[i].getLocation();
+        Location l2 = path[(i + 1) % path.size()].getLocation();
+        std::cout << "<line x1=\"" << l1.lon << "\" y1=\"" << l1.lat << "\" x2=\"" << l2.lon << "\" y2=\"" << l2.lat << "\"/>";
+    }
+    std::cout << "<style>line{stroke-width:.1;stroke:black;}</style>";
+    std::cout << "</svg>" << std::endl;
 
     std::cin.get();
     return 0;

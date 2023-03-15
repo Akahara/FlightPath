@@ -25,9 +25,17 @@ namespace breitling_constraints {
 constexpr daytime_t MAXIMUM_FLYGHT_DURATION = 24;
 // the plane must go through 100 stations minimum
 constexpr size_t MINIMUM_STATION_COUNT = 100;
+// there are 4 predefined regions to go through
+constexpr size_t MANDATORY_REGION_COUNT = 4;
+
+// region must be in range 0..3 inclusive
+// The Breitling cup specifies 4 regions to pass through, meaning a path must cross
+// at least one station in each region. Regions are delimited by longitude/latitude lines
+// regions are ordered counter counter clockwise, starting from NE
+bool isStationInMandatoryRegion(const Station &station, unsigned char region);
 
 // the path must go through 4 stations, one for each cardinal direction
-bool satisfiesCardinalsConstraints(const Path &path);
+bool satisfiesRegionsConstraints(const Path &path);
 // the path must go through a set number of stations
 bool satisfiesStationCountConstraints(const Path &path);
 // the path must start and end at set cities
@@ -39,9 +47,9 @@ bool satisfiesTimeConstraints(const BreitlingData &dataset, const Path &path);
 
 // check all satisfiesXXConstraints, users may want to check time constraints separately because
 // slow planes simply cannot go through the set number of stations in due time
-bool isPathValid(const BreitlingData &dataset, const Path &path)
+inline bool isPathValid(const BreitlingData &dataset, const Path &path)
 {
-    return satisfiesCardinalsConstraints(path) &&
+    return satisfiesRegionsConstraints(path) &&
         satisfiesStationCountConstraints(path) &&
         satisfiesPathConstraints(dataset, path) &&
         satisfiesFuelConstraints(dataset, path) &&

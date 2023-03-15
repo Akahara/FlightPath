@@ -2,16 +2,44 @@
 
 #include "../geometry.h"
 
+#include <assert.h>
+#include <set>
+
 namespace breitling_constraints {
 
-bool satisfiesCardinalsConstraints(const Path &path)
+bool isStationInMandatoryRegion(const Station &station, unsigned char region)
 {
-    return true; // TODO implement
+  switch (region) {
+  case 0: return station.getLocation().lon < -1.66;
+  case 1: return station.getLocation().lon < 2 && station.getLocation().lat < 44.5;
+  case 2: return station.getLocation().lon > 5 && station.getLocation().lat < 44.5;
+  case 3: return station.getLocation().lon > 6 && station.getLocation().lat > 46.5;
+  default: assert(false); return false;
+  }
+}
+
+bool satisfiesRegionsConstraints(const Path &path)
+{
+    static_assert(MANDATORY_REGION_COUNT == 4);
+    static_assert(sizeof(long) == 4);
+    union {
+        bool notCrossedRegions[MANDATORY_REGION_COUNT];
+        long anyRegionsNotCrossed;
+    };
+    anyRegionsNotCrossed = 0;
+    notCrossedRegions[0] = notCrossedRegions[1] = notCrossedRegions[2] = notCrossedRegions[3] = true;
+    for(size_t i = 0; i < path.size() && anyRegionsNotCrossed; i++) {
+        const Station *s = path.getStations()[i];
+        for(size_t r = 0; r < MANDATORY_REGION_COUNT; r++)
+            notCrossedRegions[r] = notCrossedRegions[r] && !isStationInMandatoryRegion(*s, r);
+    }
+    return anyRegionsNotCrossed == 0;
 }
 
 bool satisfiesStationCountConstraints(const Path &path)
 {
-    return path.size() >= MINIMUM_STATION_COUNT;
+    std::set<const Station*> distinctStations(path.getStations().begin(), path.getStations().end());
+    return distinctStations.size() >= MINIMUM_STATION_COUNT;
 }
 
 bool satisfiesPathConstraints(const BreitlingData &dataset, const Path &path)
@@ -21,7 +49,9 @@ bool satisfiesPathConstraints(const BreitlingData &dataset, const Path &path)
 
 bool satisfiesFuelConstraints(const BreitlingData &dataset, const Path &path)
 {
-    // this test assumes that planeFuelUsage>0 planeSpeed>0 planeFuelCapacity>0
+    assert(dataset.planeFuelUsage > 0);
+    assert(dataset.planeSpeed > 0);
+    assert(dataset.planeFuelCapacity > 0);
     nauticmiles_t currentDistance = 0;
     nauticmiles_t distanceSinceLastRefuel = 0;
     for (size_t i = 1; i < path.size(); i++) {

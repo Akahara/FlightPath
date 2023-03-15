@@ -9,7 +9,12 @@ typedef unsigned char cardinal_t;
 // Cardinals, can be considered a bitwise enum
 namespace Card {
 
-constexpr cardinal_t N = 0, S = 1, E = 2, W = 4;
+constexpr int N_offset = 0, S_offset = 1, E_offset = 2, W_offset = 3;
+constexpr cardinal_t
+  N = 1<<N_offset,
+  S = 1<<S_offset,
+  E = 1<<E_offset,
+  W = 1<<W_offset;
 constexpr cardinal_t NE = N | E, NW = N | W, SE = S | E, SW = S | W;
 
 }
