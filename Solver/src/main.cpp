@@ -31,11 +31,11 @@ void testDummy()
 int main()
 {
     XLSSerializer serializer;
-    GeoMap map = serializer.parseMap("20aerodromes.xlsx");
+    GeoMap map = serializer.parseMap("aerodromes.xlsx");
 
     for (const Station &s : map.getStations()) {
-        std::cout << s.getName() << " " << s.getOACI() << " " << s.getLocation().lon << " " << s.getLocation().lat << std::endl;
+        std::cout << s.getOACI() << " | " << s.getName() << " | " << s.getLocation().lon << " | " << s.getLocation().lat  << " | " << std::endl;
     }
-
+    
     return 0;
 }
