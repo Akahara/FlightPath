@@ -1,10 +1,12 @@
 #include <iostream>
-
+#include <fstream>
 #include "../vendor/OpenXLSX/OpenXLSX.hpp"
 
 #include "geomap.h"
 #include "geometry.h"
+#include "geoserializer/csvserializer.h"
 
+/*/
 void testDummy()
 {
     // TODO move all this in test classes, or scrap completely
@@ -24,11 +26,40 @@ void testDummy()
     std::cout << "distance from london to paris=" << geometry::distance(london, paris) << "nmi" << std::endl;
 
     std::cin.get();
-}
+}*/
 
 int main()
 {
-    using namespace OpenXLSX;
+
+   
+    CSVSerializer csvObject;
+    std::filesystem::path chemin("aerodromes.csv");
+    std::filesystem::path way("aeroTest.csv");
+    
+    GeoMap geoObject = csvObject.parseMap(chemin);
+
+
+    for (Station i : geoObject.getStations())
+    {
+        std::cout << reverse_VFR.at(i.getNightVFR()) << std::endl;
+    }
+
+    
+    Path path{};
+
+    int i=0;
+    while ( i < 10)
+    {
+        Location loc = Location::fromNECoordinates(51.5072, -0.1276);
+        std::string nom = "name";
+        Station *stat = new Station(loc, nom, "code ","rr",Station::NightVFR::NO,Station::Fuel::AUTOMAT);
+        path.getStations().emplace_back(stat);
+        i++;
+    }
+
+    csvObject.writePath(way, path);
+    
+   /* using namespace OpenXLSX;
 
     XLDocument doc;
     doc.create("Spreadsheet.xlsx");
@@ -49,5 +80,5 @@ int main()
     std::cout << wk2.cell("A1").value().get<std::string>() << std::endl;
 
     std::cin.get();
-    return 0;
+    return 0;*/
 }

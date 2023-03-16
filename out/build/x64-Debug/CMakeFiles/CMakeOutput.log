@@ -1,0 +1,100 @@
+The system is: Windows - 10.0.22621 - AMD64
+Compiling the C compiler identification source file "CMakeCCompilerId.c" succeeded.
+Compiler: C:/Program Files/Microsoft Visual Studio/2022/Community/VC/Tools/MSVC/14.35.32215/bin/Hostx64/x64/cl.exe 
+Build flags: 
+Id flags:  
+
+The output was:
+0
+Compilateur d'optimisation Microsoft (R) C/C++ version 19.35.32215 pour x64
+Copyright (C) Microsoft Corporation. Tous droits réservés.
+
+CMakeCCompilerId.c
+Microsoft (R) Incremental Linker Version 14.35.32215.0
+Copyright (C) Microsoft Corporation.  All rights reserved.
+
+/out:CMakeCCompilerId.exe 
+CMakeCCompilerId.obj 
+
+
+Compilation of the C compiler identification source "CMakeCCompilerId.c" produced "CMakeCCompilerId.exe"
+
+Compilation of the C compiler identification source "CMakeCCompilerId.c" produced "CMakeCCompilerId.obj"
+
+The C compiler identification is MSVC, found in "C:/Users/jesie/Documents/Cours/Polytech Tours/S8/Aero/ProjetS8/out/build/x64-Debug/CMakeFiles/3.25.1-msvc1/CompilerIdC/CMakeCCompilerId.exe"
+
+Compiling the CXX compiler identification source file "CMakeCXXCompilerId.cpp" succeeded.
+Compiler: C:/Program Files/Microsoft Visual Studio/2022/Community/VC/Tools/MSVC/14.35.32215/bin/Hostx64/x64/cl.exe 
+Build flags: 
+Id flags:  
+
+The output was:
+0
+Compilateur d'optimisation Microsoft (R) C/C++ version 19.35.32215 pour x64
+Copyright (C) Microsoft Corporation. Tous droits réservés.
+
+CMakeCXXCompilerId.cpp
+Microsoft (R) Incremental Linker Version 14.35.32215.0
+Copyright (C) Microsoft Corporation.  All rights reserved.
+
+/out:CMakeCXXCompilerId.exe 
+CMakeCXXCompilerId.obj 
+
+
+Compilation of the CXX compiler identification source "CMakeCXXCompilerId.cpp" produced "CMakeCXXCompilerId.exe"
+
+Compilation of the CXX compiler identification source "CMakeCXXCompilerId.cpp" produced "CMakeCXXCompilerId.obj"
+
+The CXX compiler identification is MSVC, found in "C:/Users/jesie/Documents/Cours/Polytech Tours/S8/Aero/ProjetS8/out/build/x64-Debug/CMakeFiles/3.25.1-msvc1/CompilerIdCXX/CMakeCXXCompilerId.exe"
+
+Detecting C compiler ABI info compiled with the following output:
+Change Dir: C:/Users/jesie/Documents/Cours/Polytech Tours/S8/Aero/ProjetS8/out/build/x64-Debug/CMakeFiles/CMakeScratch/TryCompile-zruf9v
+
+Run Build Command(s):C:/Program Files/Microsoft Visual Studio/2022/Community/Common7/IDE/CommonExtensions/Microsoft/CMake/Ninja/ninja.exe cmTC_3c00b && [1/2] Building C object CMakeFiles\cmTC_3c00b.dir\CMakeCCompilerABI.c.obj
+[2/2] Linking C executable cmTC_3c00b.exe
+
+
+
+Detecting CXX compiler ABI info compiled with the following output:
+Change Dir: C:/Users/jesie/Documents/Cours/Polytech Tours/S8/Aero/ProjetS8/out/build/x64-Debug/CMakeFiles/CMakeScratch/TryCompile-5dcqp9
+
+Run Build Command(s):C:/Program Files/Microsoft Visual Studio/2022/Community/Common7/IDE/CommonExtensions/Microsoft/CMake/Ninja/ninja.exe cmTC_8964d && [1/2] Building CXX object CMakeFiles\cmTC_8964d.dir\CMakeCXXCompilerABI.cpp.obj
+[2/2] Linking CXX executable cmTC_8964d.exe
+
+
+
+Performing C++ SOURCE FILE Test CHARCONV_RESULT succeeded with the following output:
+Change Dir: C:/Users/jesie/Documents/Cours/Polytech Tours/S8/Aero/ProjetS8/out/build/x64-Debug/CMakeFiles/CMakeScratch/TryCompile-grnl69
+
+Run Build Command(s):C:/Program Files/Microsoft Visual Studio/2022/Community/Common7/IDE/CommonExtensions/Microsoft/CMake/Ninja/ninja.exe cmTC_10596 && [1/2] Building CXX object CMakeFiles\cmTC_10596.dir\src.cxx.obj
+[2/2] Linking CXX executable cmTC_10596.exe
+
+
+Source file was:
+
+                          #include <array>
+                          #include <string>
+                          #include <charconv>
+                          
+                          int main() {
+                                  std::array<char, 7> str {};
+                                  auto p = std::to_chars(str.data(), str.data() + str.size(), 12345).ptr;
+                                  auto strResult = std::string(str.data(), p - str.data());
+                                  
+                                  unsigned long value = 0;
+                                  std::from_chars(strResult.data(), strResult.data() + strResult.size(), value);
+
+                                  return 0;
+                          }
+
+Performing C++ SOURCE FILE Test COMPILER_HAS_DEPRECATED succeeded with the following output:
+Change Dir: C:/Users/jesie/Documents/Cours/Polytech Tours/S8/Aero/ProjetS8/out/build/x64-Debug/CMakeFiles/CMakeScratch/TryCompile-mcj2u5
+
+Run Build Command(s):C:/Program Files/Microsoft Visual Studio/2022/Community/Common7/IDE/CommonExtensions/Microsoft/CMake/Ninja/ninja.exe cmTC_f3155 && [1/2] Building CXX object CMakeFiles\cmTC_f3155.dir\src.cxx.obj
+[2/2] Linking CXX executable cmTC_f3155.exe
+
+
+Source file was:
+__declspec(deprecated) int somefunc() { return 0; }
+    int main() { return somefunc();}
+
