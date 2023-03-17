@@ -15,6 +15,7 @@ struct BreitlingData {
     daytime_t departureTime;     // time at which the plane starts flying
     double planeFuelCapacity;    // the fuel capacity of the plane, unit must match planeFuelUsage
     double planeFuelUsage;       // the speed at which fuel is consumed, per hour, fuel unit must match planeFuelCapacity
+    daytime_t timeToRefuel;      // the time it takes for the plane to refuel
     const Station *departureStation;
     const Station *targetStation;
 };
