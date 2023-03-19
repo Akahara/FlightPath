@@ -3,6 +3,7 @@
 *.vcxproj.filters
 *.vcxproj.user
 *.xls*
+*.svg
 **/packages/
 x64/
 .vs/

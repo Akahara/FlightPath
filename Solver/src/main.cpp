@@ -3,6 +3,7 @@
 #include "geomap.h"
 #include "geometry.h"
 #include "tsp/genetictsp.h"
+#include "userinterface.h"
 
 int main()
 {
@@ -36,14 +37,7 @@ int main()
     }
     std::cout.flush();
 
-    std::cout << "<svg viewBox=\"0 0 " << T << " " << T << "\" xmlns=\"http://www.w3.org/2000/svg\">";
-    for (size_t i = 0; i < path.size(); i++) {
-        Location l1 = path[i].getLocation();
-        Location l2 = path[(i + 1) % path.size()].getLocation();
-        std::cout << "<line x1=\"" << l1.lon << "\" y1=\"" << l1.lat << "\" x2=\"" << l2.lon << "\" y2=\"" << l2.lat << "\"/>";
-    }
-    std::cout << "<style>line{stroke-width:.1;stroke:black;}</style>";
-    std::cout << "</svg>" << std::endl;
+    interface_mock::writePathToFile(map, path, "out.svg");
 
     std::cin.get();
     return 0;

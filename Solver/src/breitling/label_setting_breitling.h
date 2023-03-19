@@ -87,19 +87,53 @@ static unsigned char countRegions(region_t regionsBitField)
   return BIT_COUNT_LOOKUP_TABLE[regionsBitField];
 }
 
-static time_t timeDistanceBetweenStations(const Station &s1, const Station &s2, const BreitlingData &dataset)
+static inline time_t timeDistanceBetweenStations(const Station &s1, const Station &s2, const BreitlingData &dataset)
 {
   nauticmiles_t realDistance = geometry::distance(s1.getLocation(), s2.getLocation());
   time_t timeDistance = realDistance / dataset.planeSpeed;
   return timeDistance;
 }
 
-time_t planeTimeFuelCapacity(const BreitlingData &dataset)
+static inline time_t planeTimeFuelCapacity(const BreitlingData &dataset)
 {
   return dataset.planeFuelCapacity / dataset.planeFuelUsage;
 }
 
+/*
+ * Assumes that 0..nauticalDaytime and nauticalNighttime..24 are night periods,
+ * that is, 0 < nauticalDaytime < nauticalNighttime < 24
+ */
+static inline bool isTimeInNightPeriod(time_t time, const BreitlingData &dataset)
+{
+  time = fmod(time, 24.f);
+  return time < dataset.nauticalDaytime || time > dataset.nauticalNighttime;
+}
+
 } // !namespace utils
+
+#ifdef _DEBUG
+namespace profiling_stats {
+
+static struct {
+  size_t fragmentsReallocCount;
+  size_t labelsReallocCount;
+  size_t exploredLabels;
+} stats;
+
+inline void onFragmentsRealloc() { stats.fragmentsReallocCount++; }
+inline void onLabelsRealloc() { stats.labelsReallocCount++; }
+inline void onLabelExplored() { stats.exploredLabels++; }
+
+}
+#else
+namespace profiling_stats {
+
+inline void onFragmentsRealloc() {}
+inline void onLabelsRealloc() {}
+inline void onLabelExplored() {}
+
+}
+#endif
 
 /*
  * Represents a node in a path.
@@ -344,7 +378,9 @@ public:
 
   fragmentidx_t emplace(fragmentidx_t parent, stationidx_t station)
   {
+    size_t size = m_size;
     fragmentidx_t slot = ClockArenaAllocator::alloc();
+    if(size != m_size) profiling_stats::onFragmentsRealloc();
     new (&m_array[slot]) PathFragment(station, parent); // construct in place
     return slot;
   }
@@ -376,7 +412,9 @@ public:
 
   inline labelidx_t push(Label label)
   {
+    size_t size = m_size;
     labelidx_t slot = ClockArenaAllocator::alloc();
+    if (size != m_size) profiling_stats::onLabelsRealloc();
     m_array[slot] = label;
     tryInsertInBestQueue(slot);
     return slot;
@@ -541,9 +579,19 @@ public:
   LabelSetting(const GeoMap *geomap, const BreitlingData *dataset)
     : m_geomap(geomap), m_adjencyMatrix(*geomap, *dataset), m_stationRegions(geomap->getStations().size(), NO_REGION)
   {
+    // TODO prepare the dataset & geomap
+    // that means having the departure station at index 0 in the geomap,
+    // the target station at index N-1, the departure time at 0 and
+    // day/night time offseted to reflect the departure time change.
+
     size_t stationCount = geomap->getStations().size();
     constexpr size_t regionCount = breitling_constraints::MANDATORY_REGION_COUNT;
 
+    // check that the dataset is prepared
+    assert(dataset->departureTime == 0);
+    assert(stationCount > 0);
+    assert(&geomap->getStations()[0] == dataset->departureStation);
+    assert(&geomap->getStations()[geomap->getStations().size()-1] == dataset->targetStation);
     if (stationCount > std::numeric_limits<stationidx_t>::max())
       throw std::runtime_error("Cannot handle that many stations");
 
@@ -623,7 +671,8 @@ private:
         continue; // 3 regions left to visit but only 2 more stations to go through
       if (!nextStation.hasFuel() && source.currentFuel - distanceToNext < m_adjencyMatrix.distanceToNearestStationWithFuel(nextStationIdx))
         continue; // 1 hop is possible, 2 are not because of low fuel
-      // TODO check night
+      if (!nextStation.isAccessibleAtNight() && utils::isTimeInNightPeriod(source.currentTime + distanceToNext, *m_dataset))
+        continue; // the station is not accessible during the night
 
       bool shouldExploreNoRefuel = true;
       bool shouldExploreWithRefuel = nextStation.hasFuel();
@@ -743,6 +792,7 @@ public:
 
       m_fragments.release(explored.lastFragmentIdx);
       m_labels.queue_pop();
+      profiling_stats::onLabelExplored();
 
       return reconstitutePath(bestPath);
     }
