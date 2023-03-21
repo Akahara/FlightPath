@@ -36,6 +36,30 @@
  * You will see time_t and distance_t used interchangeably in code.
  */
 
+/*
+ * Adjency matrices
+ * 
+ * Adjency matrices are the structure that caches distances between
+ * stations. The standard (full) adjency matrix has size stationCount x stationCount
+ * and covers all pairs, a partial adjency matrix can be used, it
+ * has size N x stationCount and only keeps track of the N closest
+ * stations for any station. The current implementation also garanties
+ * that a station with fuel is accessible (during day time) even if
+ * it is not in the N closest.
+ * Given our current problem N can be low and the heuristic will
+ * still be fine. This also allows us to make assumptions on the
+ * number of explored labels per iteration (it must be less than
+ * 2N, each station can be visited once with and without fuelling).
+ * In our implementation we assume that a label won't have more than
+ * 127 children and that assumption in turn allows us to only use 7
+ * bits for the 'use count' field of PathFragments.
+ */
+
+// see the comment on adjency matrices
+#define USE_FULL_ADJENCY_MATRIX 0
+// see the comment on LabelSetting::collectVisitedStations
+#define USE_SMALL_UNROLLED_PATH 1
+
  // TODO organize classes better
 
 typedef uint8_t stationidx_t;   // index in the Geomap
@@ -381,7 +405,8 @@ public:
     size_t size = m_size;
     fragmentidx_t slot = ClockArenaAllocator::alloc();
     if(size != m_size) profiling_stats::onFragmentsRealloc();
-    new (&m_array[slot]) PathFragment(station, parent); // construct in place
+    m_array[parent].setUseCount(m_array[parent].getUseCount() + 1); // increment parent use count
+    new (&m_array[slot]) PathFragment(station, parent);             // construct in place
     return slot;
   }
 
@@ -557,10 +582,46 @@ public:
   }
 };
 
-#if 0
+template<class T>
+class TriangularMatrix {
+private:
+  T *m_array;
+  size_t m_size;
+public:
+  TriangularMatrix(size_t size)
+    : m_size(size), m_array(new T[size*(size-1)/2])
+  {
+  }
+
+  ~TriangularMatrix()
+  {
+    delete[] m_array;
+  }
+
+  void fill(const T &value)
+  {
+    std::fill(m_array, m_size * (m_size - 1) / 2, value);
+  }
+
+  T &at(size_t i, size_t j)
+  {
+    assert(i != j);
+    if (i > j) std::swap(i, j);
+    size_t idx = m_size*(m_size-1)/2 - (m_size-1)*(m_size-i-1)/2 + j - i - 1;
+    return m_array[idx];
+  }
+};
+
+#if USE_FULL_ADJENCY_MATRIX
 typedef FullAdjencyMatrix AdjencyMatrix; // maybe not completely up to date
 #else
 typedef PartialAdjencyMatrix AdjencyMatrix;
+#endif
+
+#if USE_SMALL_UNROLLED_PATH
+typedef std::vector<bool> UnrolledPath;
+#else
+typedef bool *UnrolledPath;
 #endif
 
 class LabelSetting {
@@ -574,6 +635,7 @@ private:
   const GeoMap         *m_geomap;
   const BreitlingData  *m_dataset;
   distance_t            m_minDistancePerRemainingRegionCount[breitling_constraints::MANDATORY_REGION_COUNT+1];
+  UnrolledPath          m_unrolledPathVisitedStations;
 
 public:
   LabelSetting(const GeoMap *geomap, const BreitlingData *dataset)
@@ -596,7 +658,7 @@ public:
       throw std::runtime_error("Cannot handle that many stations");
 
     { // initialize station regions
-      for (size_t i = 0; i < stationCount; i++) {
+      for (stationidx_t i = 0; i < stationCount; i++) {
         for (region_t r = 0; r < regionCount; r++) {
           if (breitling_constraints::isStationInMandatoryRegion(geomap->getStations()[i], r)) {
             m_stationRegions[i] = r;
@@ -607,42 +669,55 @@ public:
     }
 
     { // find good approximations for the minimal distance to cover while having explored only r<R regions
-      // TODO comment
-      // TODO taking distances between regions centers may not be wise, these distances will be used to
-      // create lower bounds for labels that have not yet passed through n regions but the minimal distance
-      // between two regions
-      Location regionsCenters[regionCount]{};
-      int stationPerRegion[regionCount]{};
-      for (size_t i = 0; i < stationCount; i++) {
-        region_t r = m_stationRegions[i];
-        if (r != NO_REGION) {
-          regionsCenters[r].lon += geomap->getStations()[i].getLocation().lon;
-          regionsCenters[r].lat += geomap->getStations()[i].getLocation().lat;
-          stationPerRegion[r]++;
+
+      // find the minimum distances between each regions
+      TriangularMatrix<distance_t> regionAdjencyMatrix{ regionCount };
+      regionAdjencyMatrix.fill(std::numeric_limits<distance_t>::max());
+      for (stationidx_t i = 0; i < stationCount; i++) {
+        region_t ri = m_stationRegions[i];
+        if (ri == NO_REGION)
+          continue;
+        for (stationidx_t j = i + 1; j < stationCount; j++) {
+          region_t rj = m_stationRegions[j];
+          if (rj == NO_REGION)
+            continue;
+          distance_t &distance = regionAdjencyMatrix.at(ri, rj);
+          // the adjency matrix cannot be used because it may be partial
+          // and not contain the distance from i to j
+          distance = std::min(distance, utils::timeDistanceBetweenStations(geomap->getStations()[i], geomap->getStations()[j], *dataset));
         }
       }
-      for (size_t r = 0; r < regionCount; r++) {
-        regionsCenters[r].lon /= (float)stationPerRegion[r];
-        regionsCenters[r].lat /= (float)stationPerRegion[r];
-      }
+      // find the R smallest distances
       SmallBoundedPriorityQueue<distance_t> sortedCentersDistances(breitling_constraints::MANDATORY_REGION_COUNT);
       for (region_t r1 = 1; r1 < regionCount; r1++) {
         for (region_t r2 = 0; r2 < r1; r2++) {
-          distance_t distanceBetweenCenters = geometry::distance(regionsCenters[r1], regionsCenters[r2]);
-          sortedCentersDistances.insert(distanceBetweenCenters);
+          sortedCentersDistances.insert(regionAdjencyMatrix.at(r1, r2));
         }
       }
-      m_minDistancePerRemainingRegionCount[0] = 0;
       // accumulate the minimal distances
       // with 0 regions left to explore the minimal distance left to cover is 0
       // with 1, it is 0 + min(inter region distance)
       // with 2, it is 0 + min(inter region distance) + second min(inter region distance)
       // etc
+      m_minDistancePerRemainingRegionCount[0] = 0;
       for (region_t r = 0; r < breitling_constraints::MANDATORY_REGION_COUNT; r++) {
         m_minDistancePerRemainingRegionCount[1 + r] = m_minDistancePerRemainingRegionCount[r] + sortedCentersDistances.top();
         sortedCentersDistances.pop();
       }
     }
+
+#if USE_SMALL_UNROLLED_PATH
+    m_unrolledPathVisitedStations.resize(stationCount);
+#else
+    m_unrolledPathVisitedStations = new bool[stationCount];
+#endif
+  }
+
+  ~LabelSetting()
+  {
+#if !USE_SMALL_UNROLLED_PATH
+    delete[] m_unrolledPathVisitedStations;
+#endif
   }
 
 private:
@@ -655,16 +730,76 @@ private:
     return std::max({ minDistanceForRegions, distanceToTarget });
   }
 
+  /*
+   * Returns a vector with stationCount elements.
+   * Element i is set to true iff the given path crossed station i.
+   * 
+   * Depending on USE_SMALL_UNROLLED_PATH the vector can be a bool* with
+   * higher memory overhead but lower access time or a std::vector<bool>
+   * using CHAR_BIT=8 times less memory per member but with higher access
+   * time. The two changes are inconsequencial, there are too few stations
+   * for the size to matter and the access time of std::vector<bool> is
+   * tiny enough.
+   */
+  const UnrolledPath &collectVisitedStations(fragmentidx_t pathEnd)
+  {
+#if USE_SMALL_UNROLLED_PATH
+    std::fill(m_unrolledPathVisitedStations.begin(), m_unrolledPathVisitedStations.end(), 0);
+#else
+    memset(m_unrolledPathVisitedStations, 0, sizeof(bool) * m_geomap->getStations().size());
+#endif
+    while (pathEnd != 0) {
+      m_unrolledPathVisitedStations[m_fragments[pathEnd].getStationIdx()] = true;
+      pathEnd = m_fragments[pathEnd].getPreviousFragment();
+    }
+    m_unrolledPathVisitedStations[0] = true;
+  }
+
+  float scoreLabel(const Label &label)
+  {
+    // Labels with high scores will be explored first
+#if 0
+    // a label is good if...
+    float score = 0;
+    // it visited a lot of stations
+    score += label.visitedStationCount * .1f;
+    // it visited an appropriate number of regions
+    // where "appropriate" means having explored regions at the same rate as explored stations
+    score -= std::max(std::abs((float)utils::countRegions(label.visitedRegions) / breitling_constraints::MANDATORY_REGION_COUNT - (float)label.visitedStationCount / breitling_constraints::MINIMUM_STATION_COUNT)-.25f, 0.f);
+    // it has fuel, but not too much
+    score += label.currentFuel; // TODO score higher whenever (fuel is high)==(night is soon)
+    // it is quick
+    score -= label.currentTime;
+    // TODO there should be factors here, the distance between stations and the plane speed/fuel capacity is ignored
+    return score;
+#else
+    // currently there is no label domination implemented, the only reason
+    // to explore one label before another is to lower the upper bound on
+    // total time spent
+    // to do that we score labels only depending on the number of stations
+    // and regions they visited
+
+    float score = 0;
+    score += label.visitedStationCount;
+    score += utils::countRegions(label.visitedRegions) * 20;
+    score -= label.currentTime; // TODO find the right factor here
+    return score;
+#endif
+  }
+
   void explore(const Label &source, time_t currentBestTime, std::vector<Label> &explorationLabels)
   {
     PathFragment &currentFragment = m_fragments[source.lastFragmentIdx];
     stationidx_t currentStation = currentFragment.getStationIdx();
+    const UnrolledPath &visitedStations = collectVisitedStations(source.lastFragmentIdx);
     for (size_t i = 0; i < m_adjencyMatrix.adjencyCount(currentStation); i++) {
       stationidx_t nextStationIdx = m_adjencyMatrix.getAdjencyNextStation(currentStation, i);
       const Station &nextStation = m_geomap->getStations()[nextStationIdx];
       distance_t distanceToNext = m_adjencyMatrix.getAdjencyNextDistance(currentStation, i);
       region_t newLabelVisitedRegions = source.visitedRegions | m_stationRegions[nextStationIdx];
 
+      if (visitedStations[nextStationIdx])
+        continue; // station already visited
       if (distanceToNext > source.currentFuel)
         continue; // not enough fuel
       if (breitling_constraints::MINIMUM_STATION_COUNT - source.visitedStationCount > utils::countRegions(newLabelVisitedRegions))
@@ -692,7 +827,7 @@ private:
         explorationLabel.visitedRegions = newLabelVisitedRegions;
         explorationLabel.visitedStationCount++;
         explorationLabel.lastFragmentIdx = newPathFragment;
-        // TODO FIX score label
+        explorationLabel.score = scoreLabel(explorationLabel);
       }
 
       if(shouldExploreWithRefuel) { // with refuel
@@ -702,7 +837,7 @@ private:
         explorationLabel.visitedRegions = newLabelVisitedRegions;
         explorationLabel.visitedStationCount++;
         explorationLabel.lastFragmentIdx = newPathFragment;
-        // TODO FIX score label
+        explorationLabel.score = scoreLabel(explorationLabel);
       }
     }
   }
@@ -759,7 +894,7 @@ public:
 
       // explore the current label to discover new possible *and interesting* paths
       explore(explored, bestTime, explorationLabels);
-      assert(explorationLabels.size() < 255); // this is assumed by the fragments allocation mechanism
+      assert(explorationLabels.size() <= 127); // this is assumed by the PathFragment structure
 
       for (Label &nextLabel : explorationLabels) {
         if (nextLabel.visitedStationCount == breitling_constraints::MINIMUM_STATION_COUNT - 1) {
