@@ -1,0 +1,104 @@
+{
+	"configurations" : 
+	[
+		{
+			"directories" : 
+			[
+				{
+					"build" : ".",
+					"childIndexes" : 
+					[
+						1
+					],
+					"hasInstallRule" : true,
+					"jsonFile" : "directory-.-Debug-d0094a50bb2071803777.json",
+					"minimumCMakeVersion" : 
+					{
+						"string" : "3.24"
+					},
+					"projectIndex" : 0,
+					"source" : ".",
+					"targetIndexes" : 
+					[
+						1
+					]
+				},
+				{
+					"build" : "Solver/vendor/OpenXLSX",
+					"hasInstallRule" : true,
+					"jsonFile" : "directory-Solver.vendor.OpenXLSX-Debug-5162973d305666e23d96.json",
+					"minimumCMakeVersion" : 
+					{
+						"string" : "3.15"
+					},
+					"parentIndex" : 0,
+					"projectIndex" : 1,
+					"source" : "Solver/vendor/OpenXLSX",
+					"targetIndexes" : 
+					[
+						0
+					]
+				}
+			],
+			"name" : "Debug",
+			"projects" : 
+			[
+				{
+					"childIndexes" : 
+					[
+						1
+					],
+					"directoryIndexes" : 
+					[
+						0
+					],
+					"name" : "Projet_S8",
+					"targetIndexes" : 
+					[
+						1
+					]
+				},
+				{
+					"directoryIndexes" : 
+					[
+						1
+					],
+					"name" : "OpenXLSX.Library",
+					"parentIndex" : 0,
+					"targetIndexes" : 
+					[
+						0
+					]
+				}
+			],
+			"targets" : 
+			[
+				{
+					"directoryIndex" : 1,
+					"id" : "OpenXLSX::@e294d1dffe6ecd88f4b0",
+					"jsonFile" : "target-OpenXLSX-Debug-8b0fee248dad4990cf96.json",
+					"name" : "OpenXLSX",
+					"projectIndex" : 1
+				},
+				{
+					"directoryIndex" : 0,
+					"id" : "Projet_S8::@6890427a1f51a3e7e1df",
+					"jsonFile" : "target-Projet_S8-Debug-33ba159b2c20385555b0.json",
+					"name" : "Projet_S8",
+					"projectIndex" : 0
+				}
+			]
+		}
+	],
+	"kind" : "codemodel",
+	"paths" : 
+	{
+		"build" : "C:/Users/jesie/Documents/Cours/Polytech Tours/S8/Aero/ProjetS8/out/build/x64-Debug",
+		"source" : "C:/Users/jesie/Documents/Cours/Polytech Tours/S8/Aero/ProjetS8"
+	},
+	"version" : 
+	{
+		"major" : 2,
+		"minor" : 4
+	}
+}
