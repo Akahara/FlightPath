@@ -53,5 +53,5 @@ public:
     virtual void writePath(const std::filesystem::path &file, const Path &path) const = 0;
 
 protected:
-    static double string2coordinate(const std::string &str) ;
+    static double string2coordinate(const std::string &str);
 };

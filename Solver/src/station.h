@@ -30,5 +30,9 @@ public:
     const std::string &getName() const { return m_name; }
     const std::string &getOACI() const { return m_OACI; }
 
-    bool operator==(const Station &other) const { return m_location == other.m_location; }
+    const NightVFR& getNightVFR() const { return m_nightVFR; }
+    const Fuel& getFuel() const { return m_fuel; }
+    const std::string& getStatus() const { return m_status; }
+
+    bool operator==(const Station& other) const { return m_location == other.m_location; }
 };

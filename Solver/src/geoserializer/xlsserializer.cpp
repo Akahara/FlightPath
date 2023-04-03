@@ -1,6 +1,6 @@
 #include "xlsserializer.h"
 
-GeoMap XLSSerializer::parseMap(const std::filesystem::path &file) const
+GeoMap XLSSerializer::parseMap(const std::filesystem::path& file) const
 {
     GeoMap map{};
 
@@ -69,8 +69,7 @@ GeoMap XLSSerializer::parseMap(const std::filesystem::path &file) const
     return map;
 }
 
-void XLSSerializer::writePath(const std::filesystem::path &file, const Path &path) const
+void XLSSerializer::writePath(const std::filesystem::path& file, const Path& path) const
 {
     // TODO implement XLSSerializer::writePath
-
 }
