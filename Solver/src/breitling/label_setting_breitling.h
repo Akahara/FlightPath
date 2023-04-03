@@ -483,24 +483,27 @@ private:
   std::vector<std::vector<LimitedAdjency>> m_adjencyMatrix; // NxM matrix M<<N
   std::vector<distance_t> m_distanceToTarget; // 1xN matrix, the distances to the target station must be kept somehow
   std::vector<distance_t> m_distanceToNearestRefuel;
+  const GeoMap           *m_geomap;
+  const BreitlingData    *m_dataset;
 
 public:
-  PartialAdjencyMatrix(const GeoMap &geomap, const BreitlingData &dataset)
-    : m_adjencyMatrix(geomap.getStations().size()),
-    m_distanceToTarget(geomap.getStations().size()),
-    m_distanceToNearestRefuel(geomap.getStations().size())
+  PartialAdjencyMatrix(const GeoMap *geomap, const BreitlingData *dataset)
+    : m_adjencyMatrix(geomap->getStations().size()),
+    m_distanceToTarget(geomap->getStations().size()),
+    m_distanceToNearestRefuel(geomap->getStations().size()),
+    m_geomap(geomap)
   {
-    SmallBoundedPriorityQueue<LimitedAdjency> nearestStationsQueue(geomap.getStations().size()/4); // keep 1/4th of the available links
+    SmallBoundedPriorityQueue<LimitedAdjency> nearestStationsQueue(geomap->getStations().size()/4); // keep 1/4th of the available links
 
-    for (stationidx_t i = 0; i < geomap.getStations().size(); i++) {
+    for (stationidx_t i = 0; i < geomap->getStations().size(); i++) {
       distance_t minDistanceToFuel = std::numeric_limits<distance_t>::max();
       stationidx_t nearestStationWithFuel = -1;
-      for (stationidx_t j = 0; j < geomap.getStations().size(); j++) {
-        distance_t distance = utils::timeDistanceBetweenStations(geomap.getStations()[i], geomap.getStations()[j], dataset);
+      for (stationidx_t j = 0; j < geomap->getStations().size(); j++) {
+        distance_t distance = utils::timeDistanceBetweenStations(geomap->getStations()[i], geomap->getStations()[j], *dataset);
         nearestStationsQueue.insert({ distance, j });
-        if (i == geomap.getStations().size() - 1)
+        if (i == geomap->getStations().size() - 1)
           m_distanceToTarget[j] = distance;
-        if (geomap.getStations()[j].hasFuel() && distance < minDistanceToFuel) {
+        if (geomap->getStations()[j].hasFuel() && distance < minDistanceToFuel) {
           minDistanceToFuel = distance;
           nearestStationWithFuel = j;
         }
@@ -508,10 +511,16 @@ public:
       m_distanceToNearestRefuel[i] = minDistanceToFuel;
 
       nearestStationsQueue.transferTo(m_adjencyMatrix[i]);
-      if (std::find_if(m_adjencyMatrix[i].begin(), m_adjencyMatrix[i].end(), [&geomap](LimitedAdjency t) { return geomap.getStations()[t.station].hasFuel(); }) == m_adjencyMatrix[i].end()) {
+      // keep at leat one station with fuel
+      if (std::find_if(m_adjencyMatrix[i].begin(), m_adjencyMatrix[i].end(), [&geomap](LimitedAdjency t) { return geomap->getStations()[t.station].hasFuel(); }) == m_adjencyMatrix[i].end()) {
         m_adjencyMatrix[i].push_back({ minDistanceToFuel, nearestStationWithFuel });
       }
     }
+  }
+
+  inline distance_t distanceUncached(stationidx_t s1, stationidx_t s2)
+  {
+    return utils::timeDistanceBetweenStations(m_geomap->getStations()[s1], m_geomap->getStations()[j], *m_dataset);
   }
 
   inline size_t adjencyCount(stationidx_t station)
@@ -635,11 +644,12 @@ private:
   const GeoMap         *m_geomap;
   const BreitlingData  *m_dataset;
   distance_t            m_minDistancePerRemainingRegionCount[breitling_constraints::MANDATORY_REGION_COUNT+1];
+  distance_t            m_minDistancePerRemainingStationCount[breitling_constraints::MINIMUM_STATION_COUNT+1];
   UnrolledPath          m_unrolledPathVisitedStations;
 
 public:
   LabelSetting(const GeoMap *geomap, const BreitlingData *dataset)
-    : m_geomap(geomap), m_adjencyMatrix(*geomap, *dataset), m_stationRegions(geomap->getStations().size(), NO_REGION)
+    : m_geomap(geomap), m_adjencyMatrix(geomap, dataset), m_stationRegions(geomap->getStations().size(), NO_REGION)
   {
     // TODO prepare the dataset & geomap
     // that means having the departure station at index 0 in the geomap,
@@ -706,6 +716,19 @@ public:
       }
     }
 
+    { // find a good approximation for the minimal distances to cover while having visited only n<N stations
+      // similar method to the previous code block
+      SmallBoundedPriorityQueue<distance_t> sortedDistances(breitling_constraints::MANDATORY_REGION_COUNT);
+      for (stationidx_t s1 = 1; s1 < stationCount; s1++)
+        for (stationidx_t s2 = 0; s2 < s1; s2++)
+          sortedDistances.insert(m_adjencyMatrix.distanceUncached(s1, s2));
+      m_minDistancePerRemainingStationCount[0] = 0;
+      for (region_t r = 0; r < breitling_constraints::MINIMUM_STATION_COUNT; r++) {
+        m_minDistancePerRemainingStationCount[1 + r] = m_minDistancePerRemainingStationCount[r] + sortedDistances.top();
+        sortedDistances.pop();
+      }
+    }
+
 #if USE_SMALL_UNROLLED_PATH
     m_unrolledPathVisitedStations.resize(stationCount);
 #else
@@ -725,9 +748,10 @@ private:
   {
     unsigned char regionCountLeftToExplore = breitling_constraints::MANDATORY_REGION_COUNT - utils::countRegions(label.visitedRegions);
     distance_t minDistanceForRegions = m_minDistancePerRemainingRegionCount[regionCountLeftToExplore];
+    unsigned char stationsLeftToExplore = breitling_constraints::MINIMUM_STATION_COUNT - label.visitedStationCount;
+    distance_t minDistanceForStations = m_minDistancePerRemainingStationCount[stationsLeftToExplore];
     distance_t distanceToTarget = m_adjencyMatrix.distanceToTargetStation(m_fragments[label.lastFragmentIdx].getStationIdx());
-    // TODO create a distance lower bound based on the number of stations left to visit
-    return std::max({ minDistanceForRegions, distanceToTarget });
+    return std::max({ minDistanceForRegions, distanceToTarget, minDistanceForStations });
   }
 
   /*
@@ -755,9 +779,9 @@ private:
     m_unrolledPathVisitedStations[0] = true;
   }
 
+  // Labels with high scores will be explored first
   float scoreLabel(const Label &label)
   {
-    // Labels with high scores will be explored first
 #if 0
     // a label is good if...
     float score = 0;
@@ -841,12 +865,6 @@ private:
       }
     }
   }
-
-  //bool dominates(Label &dominating, Label &dominated)
-  //{
-  //  // TODO implement
-  //  return false;
-  //}
 
   Path reconstitutePath(fragmentidx_t lastFragment)
   {
