@@ -1,6 +1,5 @@
+#include <sstream>
 #include "csvserializer.h"
-
-
 
 GeoMap CSVSerializer::parseMap(const std::filesystem::path &file) const
 {
@@ -19,22 +18,20 @@ GeoMap CSVSerializer::parseMap(const std::filesystem::path &file) const
         return GeoMap();
     }
 
-    //On vide entièrement les vectors
+    //On vide entiÃ¨rement les vectors
     row.clear();
     content.clear();
 
-    //Sauter la première ligne : cette ligne contient seulement l'entête des données 
+    //Sauter la premiÃ¨re ligne : cette ligne contient seulement l'entÃªte des donnÃ©es
     getline(csvFile, infoLine);
 
-    //Recuperation des données sous forme de vectors:  
+    //Recuperation des donnï¿½es sous forme de vectors:  
     while (std::getline(csvFile, infoLine))
     {
         std::stringstream sLine(infoLine);
         row.clear();
-        //On sépare chaque ligne grâce au séparateur ";" 
 
-
-
+        //On sÃ©pare chaque ligne grace au sÃ©parateur ";"
         while (std::getline(sLine, word, ';'))
         {
             row.push_back(word);
@@ -43,21 +40,33 @@ GeoMap CSVSerializer::parseMap(const std::filesystem::path &file) const
         //On ajoute le vector row au vector content
         content.push_back(row);
     }
-
     
-    //Création des stations a partir des locations  
+    //CrÃ©ation des stations a partir des locations
     for (int i = 0; i < content.size(); i++)
     {
         if (content[i][EXCLUDE_COLUMN-1].empty())
         {
-            Location loc{ string2coordinate(content[i][LONGITUDE_COLUMN - 1]),string2coordinate(content[i][LATITUDE_COLUMN - 1]) };
-            Station s(loc, content[i][NAME_COLUMN - 1], content[i][OACI_COLUMN - 1], content[i][STATUS_COLUMN - 1], vfr[content[i][NIGHT_VFR_COLUMN - 1]], fuel[content[i][FUEL_COLUMN - 1]]);
-            //On ajoute ses stations dans le GeoMap résultat
-            resultat.getStations().emplace_back(s);
+            std::string OACI, name, lat, lon, status, nightVFR, fuel;
+
+            OACI = content[i][OACI_COLUMN - 1];
+            name = content[i][NAME_COLUMN - 1];
+            lat = content[i][LATITUDE_COLUMN - 1];
+            lon = content[i][LONGITUDE_COLUMN - 1];
+            status = content[i][STATUS_COLUMN - 1];
+            nightVFR = content[i][NIGHT_VFR_COLUMN - 1];
+            fuel = content[i][FUEL_COLUMN - 1];
+
+            if (fuel.back() == '\r') {
+                fuel.pop_back(); // remove the last character (\r)
+            }
+
+            Location location {string2coordinate(lon), string2coordinate(lat)};
+            Station station (location, name, OACI, status, nightVFR, fuel);
+
+            //On ajoute ses stations dans le GeoMap rÃ©sultat
+            resultat.getStations().emplace_back(station);
         }
     }
- 
-   
 
     return resultat;
 }
@@ -67,13 +76,10 @@ void CSVSerializer::writePath(const std::filesystem::path &file, const Path &pat
     std::ofstream csvFile;
     csvFile.open(file, std::ios::app);
 
-    
-
     if (!csvFile.is_open())
     {
         std::cout << "error";
         throw std::runtime_error("Erreur ouverture");
-        
     }
 
     for (Station *i : path.getStations())
@@ -83,12 +89,9 @@ void CSVSerializer::writePath(const std::filesystem::path &file, const Path &pat
         csvFile << i->getLocation().lat << ";";
         csvFile << i->getLocation().lon << ";";
         csvFile << i->getStatus() << ";";
-        csvFile << reverse_VFR.at(i->getNightVFR()) << ";";
-        csvFile << reverse_FUEL.at(i->getFuel()) << ";\n";
-        
-            
+        csvFile << i->getNightVFR() << ";";
+        csvFile << i->getFuel() << ";\n";
     }
 
     csvFile.close();
-
 }
