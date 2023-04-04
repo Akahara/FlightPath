@@ -79,10 +79,10 @@ public:
 
 class TSPGenetics : public Genetics<Path> {
 private:
-    const std::vector<Station> *m_availableStations;
+    const std::vector<ProblemStation> *m_availableStations;
 public:
-    TSPGenetics(const GeoMap &map)
-        : m_availableStations(&map.getStations())
+    TSPGenetics(const ProblemMap &map)
+        : m_availableStations(&map)
     {
     }
 
@@ -95,7 +95,7 @@ public:
             Path path;
             path.getStations().reserve(m_availableStations->size());
             for (size_t i = 0; i < indices.size(); i++)
-                path.getStations().push_back(&m_availableStations->at(indices[i]));
+                path.getStations().push_back(m_availableStations->at(indices[i]).getOriginalStation());
             return path;
         });
     }
@@ -123,7 +123,7 @@ public:
     }
 };
 
-Path GeneticTSPSolver::solveForPath(const GeoMap &map)
+Path GeneticTSPSolver::solveForPath(const ProblemMap &map)
 {
     TSPGenetics genetics{ map };
     return genetics.runEvolution();

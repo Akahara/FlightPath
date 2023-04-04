@@ -42,9 +42,11 @@ bool satisfiesStationCountConstraints(const Path &path)
     return distinctStations.size() >= MINIMUM_STATION_COUNT;
 }
 
-bool satisfiesPathConstraints(const BreitlingData &dataset, const Path &path)
+bool satisfiesPathConstraints(const GeoMap &map, const BreitlingData &dataset, const Path &path)
 {
-    return path.size() > 0 && path[0] == *dataset.departureStation && path[path.size() - 1] == *dataset.targetStation;
+    return path.size() > 0
+      && path[0] == map.getStations()[dataset.departureStation] 
+      && path[path.size() - 1] == map.getStations()[dataset.targetStation];
 }
 
 bool satisfiesFuelConstraints(const BreitlingData &dataset, const Path &path)
@@ -87,7 +89,3 @@ bool canBeUsedToFuel(const BreitlingData &dataset, const Station &station, dayti
 
 } // !namespace breitling_constraints
 
-Path BreitlingSolver::solveForPath(const GeoMap &map)
-{
-    return Path(); // TODO solve the breitling cup
-}

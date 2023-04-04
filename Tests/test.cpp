@@ -5,7 +5,6 @@
 
 #include "../Solver/src/geomap.h"
 #include "../Solver/src/geometry.h"
-#include "../Solver/src/tsp/TspSolver.h"
 #include "../Solver/src/tsp/genetictsp.h"
 #include "../Solver/src/breitling/BreitlingSolver.h"
 

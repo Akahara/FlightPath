@@ -6,7 +6,6 @@
 // Unless otherwise specified, methods should respond well to values in range 0..inf
 typedef float daytime_t;
 
-// to be renamed
 // All daytime fields in this struct should be in the 0..24 range
 struct BreitlingData {
     nauticmiles_t planeSpeed;    // nautic miles per hour
@@ -16,8 +15,8 @@ struct BreitlingData {
     double planeFuelCapacity;    // the fuel capacity of the plane, unit must match planeFuelUsage
     double planeFuelUsage;       // the speed at which fuel is consumed, per hour, fuel unit must match planeFuelCapacity
     daytime_t timeToRefuel;      // the time it takes for the plane to refuel
-    const Station *departureStation;
-    const Station *targetStation;
+    size_t departureStation;
+    size_t targetStation;
 };
 
 namespace breitling_constraints {
@@ -40,7 +39,7 @@ bool satisfiesRegionsConstraints(const Path &path);
 // the path must go through a set number of stations
 bool satisfiesStationCountConstraints(const Path &path);
 // the path must start and end at set cities
-bool satisfiesPathConstraints(const BreitlingData &dataset, const Path &path);
+bool satisfiesPathConstraints(const GeoMap &map, const BreitlingData &dataset, const Path &path);
 // the path must allow the plane to not go out of fuel, it is assumed that the plane fuels up at *every* station when possible
 bool satisfiesFuelConstraints(const BreitlingData &dataset, const Path &path);
 // the whole path must not take too long
@@ -48,11 +47,11 @@ bool satisfiesTimeConstraints(const BreitlingData &dataset, const Path &path);
 
 // check all satisfiesXXConstraints, users may want to check time constraints separately because
 // slow planes simply cannot go through the set number of stations in due time
-inline bool isPathValid(const BreitlingData &dataset, const Path &path)
+inline bool isPathValid(const GeoMap &map, const BreitlingData &dataset, const Path &path)
 {
     return satisfiesRegionsConstraints(path) &&
         satisfiesStationCountConstraints(path) &&
-        satisfiesPathConstraints(dataset, path) &&
+        satisfiesPathConstraints(map, dataset, path) &&
         satisfiesFuelConstraints(dataset, path) &&
         satisfiesTimeConstraints(dataset, path);
 }
@@ -61,15 +60,3 @@ inline bool isPathValid(const BreitlingData &dataset, const Path &path)
 bool canBeUsedToFuel(const BreitlingData &dataset, const Station &station, daytime_t daytime);
 
 }
-
-class BreitlingSolver : public PathSolver {
-private:
-    BreitlingData m_dataset;
-public:
-    BreitlingSolver(const BreitlingData &dataset)
-        : m_dataset(dataset)
-    {
-    }
-
-    virtual Path solveForPath(const GeoMap &map) override;
-};
