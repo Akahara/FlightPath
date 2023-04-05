@@ -1,7 +1,9 @@
 #pragma once
 
-#include "../geoserializer.h"
 #include <OpenXLSX.hpp>
+
+#include "../geoserializer.h"
+#include "../geometry.h"
 
 class XLSSerializer : public GeoSerializer {
 public:
