@@ -4,6 +4,7 @@
 
 #include "geomap.h"
 #include "path.h"
+#include "pathsolver.h"
 
 class UserInterface {
 private:
@@ -12,6 +13,6 @@ private:
 
 namespace interface_mock {
 
-void writePathToFile(const GeoMap &geomap, const Path &path, const std::filesystem::path &file);
+void writePathToFile(const ProblemMap &geomap, const Path &path, const std::filesystem::path &file);
 
 }

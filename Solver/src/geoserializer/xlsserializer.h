@@ -1,7 +1,5 @@
 #pragma once
 
-#include <OpenXLSX.hpp>
-
 #include "../geoserializer.h"
 #include "../geometry.h"
 

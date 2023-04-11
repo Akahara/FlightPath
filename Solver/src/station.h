@@ -1,5 +1,7 @@
 #pragma once
 
+#include <string>
+
 #include "geography.h"
 
 class Station {

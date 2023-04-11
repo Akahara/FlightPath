@@ -18,7 +18,7 @@ double GeoSerializer::string2coordinate(const std::string &str)
     double result = std::stod(degrees) + std::stod(minutes) / 60;
 
     // change sign to keep a consistent coordinate system
-    if (direction == "W" | direction == "O" | direction == "S")
+    if (direction == "W" || direction == "O" || direction == "S")
     {
         result = -result;
     }

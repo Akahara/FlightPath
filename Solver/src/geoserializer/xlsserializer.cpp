@@ -1,5 +1,7 @@
 #include "xlsserializer.h"
 
+#include <OpenXLSX.hpp>
+
 GeoMap XLSSerializer::parseMap(const std::filesystem::path& file) const
 {
     GeoMap map{};

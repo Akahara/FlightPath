@@ -1,4 +1,4 @@
-#include "BreitlingSolver.h"
+#include "breitlingsolver.h"
 
 #include "../geometry.h"
 

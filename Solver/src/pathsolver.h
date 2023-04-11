@@ -14,6 +14,11 @@ public:
   {
   }
 
+  ProblemStation() 
+    : m_station(nullptr), m_isAccessibleAtNight(false), m_canBeUsedToFuel(false)
+  {
+  }
+
   const Location &getLocation() const { return m_station->getLocation(); }
   bool isAccessibleAtNight() const { return m_isAccessibleAtNight; }
   bool canBeUsedToFuel() const { return m_canBeUsedToFuel; }
