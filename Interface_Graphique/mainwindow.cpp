@@ -7,7 +7,7 @@ MainWindow::MainWindow(QWidget *parent)
 {
     ui->setupUi(this);
 
-    ui->graphicsView->setContentsMargins(10,10,0,0);
+    ui->listWidget_1->setContentsMargins(10,10,0,0);
 
 }
 
@@ -19,7 +19,7 @@ MainWindow::~MainWindow()
 
 void MainWindow::on_comboBox_choisir_algo_currentIndexChanged(int index)
 {
-    if (index == 0)
+    if (index == 1) //TSP
     {
         ui->label_11->hide();
         ui->label_12->hide();
@@ -32,7 +32,7 @@ void MainWindow::on_comboBox_choisir_algo_currentIndexChanged(int index)
         ui->doubleSpinBox_recharge->hide();
         ui->checkBox_boucle->show();
     }
-    else
+    else if(index==2)   //Breitling
     {
         ui->label_11->show();
         ui->label_12->show();

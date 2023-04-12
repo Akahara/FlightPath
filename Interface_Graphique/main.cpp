@@ -1,7 +1,9 @@
 #include "mainwindow.h"
-
+using namespace std;
 #include <QApplication>
 #include <QFile>
+#include <QDir>
+
 
 
 int main(int argc, char *argv[])
@@ -9,8 +11,10 @@ int main(int argc, char *argv[])
     QApplication a(argc, argv);
 
     //Set the app style sheet
-    QFile styleSheetFile("E:/001_FA/001_Tours/Cours/S8/Projet Collectif/interface graphique/Interface_Graphique/Adaptic.qss");
-    //QFile styleSheetFile("E:/001_FA/001_Tours/Cours/S8/Projet Collectif/interface graphique/Interface_Graphique/Combinear.qss");
+    QString relativePath = "Adaptic.qss";   //Combinear.qss
+    QString absolutePath = QDir(QCoreApplication::applicationDirPath()).absoluteFilePath(relativePath);
+
+    QFile styleSheetFile(absolutePath);
     styleSheetFile.open(QFile::ReadOnly);
     QString styleSheet = QLatin1String(styleSheetFile.readAll());
     a.setStyleSheet(styleSheet);

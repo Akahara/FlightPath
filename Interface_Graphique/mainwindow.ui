@@ -74,6 +74,11 @@
             </property>
             <item>
              <property name="text">
+              <string>Choisissez</string>
+             </property>
+            </item>
+            <item>
+             <property name="text">
               <string notr="true">TSP</string>
              </property>
             </item>
@@ -132,7 +137,11 @@
            </widget>
           </item>
           <item row="3" column="1">
-           <widget class="QDoubleSpinBox" name="doubleSpinBox_recharge"/>
+           <widget class="QDoubleSpinBox" name="doubleSpinBox_recharge">
+            <property name="maximum">
+             <double>9999999.990000000223517</double>
+            </property>
+           </widget>
           </item>
           <item row="3" column="2">
            <widget class="QLabel" name="label_15">
@@ -345,7 +354,11 @@
            </widget>
           </item>
           <item row="0" column="1">
-           <widget class="QDoubleSpinBox" name="doubleSpinBox_vitesse"/>
+           <widget class="QDoubleSpinBox" name="doubleSpinBox_vitesse">
+            <property name="maximum">
+             <double>9999999.990000000223517</double>
+            </property>
+           </widget>
           </item>
           <item row="0" column="2">
            <widget class="QLabel" name="label">
@@ -368,7 +381,11 @@
            </widget>
           </item>
           <item row="1" column="1">
-           <widget class="QDoubleSpinBox" name="doubleSpinBox_capacite"/>
+           <widget class="QDoubleSpinBox" name="doubleSpinBox_capacite">
+            <property name="maximum">
+             <double>9999999.990000000223517</double>
+            </property>
+           </widget>
           </item>
           <item row="1" column="2">
            <widget class="QLabel" name="label_9">
@@ -391,7 +408,11 @@
            </widget>
           </item>
           <item row="2" column="1">
-           <widget class="QDoubleSpinBox" name="doubleSpinBox_consommation"/>
+           <widget class="QDoubleSpinBox" name="doubleSpinBox_consommation">
+            <property name="maximum">
+             <double>9999999.990000000223517</double>
+            </property>
+           </widget>
           </item>
           <item row="2" column="2">
            <widget class="QLabel" name="label_10">
@@ -406,7 +427,7 @@
          <widget class="QListWidget" name="listWidget_2"/>
         </item>
         <item>
-         <widget class="QListWidget" name="listWidget"/>
+         <widget class="QListWidget" name="listWidget_3"/>
         </item>
         <item>
          <widget class="QPushButton" name="pushButton_calculer">
@@ -423,18 +444,10 @@
         </item>
        </layout>
       </widget>
-      <widget class="QGraphicsView" name="graphicsView">
-       <property name="sizePolicy">
-        <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
-         <horstretch>0</horstretch>
-         <verstretch>0</verstretch>
-        </sizepolicy>
-       </property>
-       <property name="layoutDirection">
-        <enum>Qt::LeftToRight</enum>
-       </property>
-      </widget>
      </widget>
+    </item>
+    <item>
+     <widget class="QListWidget" name="listWidget_1"/>
     </item>
    </layout>
   </widget>
