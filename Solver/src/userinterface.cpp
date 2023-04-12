@@ -30,7 +30,7 @@ void interface_mock::writePathToFile(const GeoMap &geomap, const Path &path, con
 
   for (const Station &station : geomap.getStations()) {
     const char *color = "red"; // TODO base color on 
-    file << "<circle cx=\"" << station.getLocation().lon << "\" cy=\"" << station.getLocation().lat << "\" r=\".2\" fill=\"" << color << "\"/>\n";
+    file << "<circle cx=\"" << station.getLocation().lon << "\" cy=\"" << station.getLocation().lat << "\" r=\".14\" fill=\"" << color << "\"/>\n";
   }
 
   file << "<path d=\"M";

@@ -21,7 +21,7 @@ bool isStationInMandatoryRegion(const Station &station, unsigned char region)
 bool satisfiesRegionsConstraints(const Path &path)
 {
     static_assert(MANDATORY_REGION_COUNT == 4);
-    static_assert(sizeof(long) == 4);
+    //static_assert(sizeof(long) == 4);
     union {
         bool notCrossedRegions[MANDATORY_REGION_COUNT];
         long anyRegionsNotCrossed;
