@@ -24,6 +24,5 @@ int main()
 
     interface_mock::writePathToFile(map, path, "out.svg");
 
-    std::cin.get();
     return 0;
 }
