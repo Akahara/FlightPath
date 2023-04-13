@@ -1,4 +1,5 @@
 #include <iostream>
+#include <map>
 
 #include "geomap.h"
 #include "geometry.h"
@@ -7,8 +8,6 @@
 #include "geoserializer/csvserializer.h"
 #include "breitling/breitlingsolver.h"
 #include "breitling/label_setting_breitling.h"
-
-#include <map>
 
 ProblemMap adaptMapToProblemMap(const GeoMap &map)
 {
@@ -86,7 +85,6 @@ int main()
     try {
       //map = serializer->parseMap("Spreadsheet.xlsx");
       map = serializer->parseMap("aerodromes.csv");
-      problemMap = adaptMapToProblemMap(map);
     } catch (const std::runtime_error &err) {
       std::cerr << err.what() << std::endl;
       std::cin.get();
@@ -102,6 +100,7 @@ int main()
     map.getStations().erase(
       std::remove_if(map.getStations().begin(), map.getStations().end(), [](auto&) { return rand() & 1; }),
       map.getStations().end());
+    problemMap = adaptMapToProblemMap(map);
 
     std::cout << "Map loaded with " << map.getStations().size() << " stations" << std::endl;
 

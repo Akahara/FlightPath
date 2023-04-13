@@ -72,7 +72,7 @@ GeoMap CSVSerializer::parseMap(const std::filesystem::path &file) const
                                          + ": " + e.what());
             }
 
-            Location location{lat_value, lon_value};
+            Location location{ lon_value, lat_value };
             Station station (location, name, OACI, status, nightVFR, fuel);
 
             // Add the station to the map
