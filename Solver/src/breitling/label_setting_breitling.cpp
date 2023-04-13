@@ -155,6 +155,7 @@ typedef disttime_t distance_t;  // a distance, see the comment on time/distance 
 typedef uint8_t region_t;       // bit field, 0b1010 means that the 2nd and 4th regions have been visited
 typedef uint8_t regionidx_t;    // offset in a region_t, ie. regionidx_t=2 means the third region and corresponds to region_t=0b100
 typedef float score_t;
+typedef uint32_t fragmentidx_t; // TODO comment
 typedef std::bitset<packed_data_structure::MAX_SUPPORTED_STATIONS> stationset_t; // TODO comment
 
 // make sure that all regions combinations can be represented with region_t
@@ -254,11 +255,66 @@ static inline bool isTimeInNightPeriod(disttime_t time, const BreitlingData &dat
 } // !namespace utils
 
 /*
+ * Represents a node in a path.
+ *
+ * The Label setting algorithm is very memory-hungry, to avoid storing label paths as arrays of stations
+ * which are *way* to big, linked lists are used. A PathFragment is a node in the list, it has a station
+ * id (index in the geomap's stations list), a previous fragment id (index in the FragmentsArena) and a use
+ * count, the use count is used by the fragment arena to free unused fragments.
+ *
+ * When a new fragment A is created and associated with a label in the open-list its use count is initialized
+ * to 1. When a new fragment B is created with A as its parent, the use count of A is incremented. When the
+ * label of A is explored (- the label, not its children -) the use count of A is decremented. When the
+ * use count of A reaches 0 it is marked for recycling and the use count of the parent of A is decremented.
+ *
+ * For example:
+ *
+ * L = {C,E,F}
+ * A(2) -> B(1) -> C(1)
+ *      \
+ *       > D(2) -> E(1)
+ *              \
+ *               > F(1)
+ * Notation: <Fragment>(<use count>), the station id is hidden
+ *
+ * If C is explored but does not produces children, its use count is decremented to 0, it is marked for
+ * recycling and B's use count is decremented, also reaching 0 so it is marked to ; A's use count is
+ * decremented to 1 but not marked.
+ */
+struct PathFragment {
+public:
+  static constexpr fragmentidx_t NO_PARENT_FRAGMENT = 0;
+private:
+  static constexpr fragmentidx_t PREVIOUS_FRAGMENT_IDX_EMPTY_MARKER = -1;
+
+  uint16_t packedStationUseCount; // 9 bits for the station (up to 512) and 7 bits for the use count (up to 127 immediate children + 1 immediate use)
+  fragmentidx_t previousFragmentIdx;
+
+public:
+  PathFragment(stationidx_t station, fragmentidx_t previousFragmentIdx)
+    : previousFragmentIdx(previousFragmentIdx)
+  {
+    assert(station <= 0b1'1111'1111);
+    packedStationUseCount = station | (1 << 9); // initialized with 1 use
+  }
+
+  inline stationidx_t getStationIdx() const { return packedStationUseCount & 0b1'1111'1111; }
+  inline uint8_t getUseCount() const { return packedStationUseCount >> 9; }
+  inline void setUseCount(uint8_t count) { assert(count <= 0b111'111); packedStationUseCount = getStationIdx() | count << 9; }
+  inline fragmentidx_t getPreviousFragment() const { return previousFragmentIdx; }
+
+  inline bool isEmpty() const { return previousFragmentIdx == PREVIOUS_FRAGMENT_IDX_EMPTY_MARKER; }
+  inline void setEmpty() { previousFragmentIdx = PREVIOUS_FRAGMENT_IDX_EMPTY_MARKER; }
+};
+
+/*
  * Label of the Label Setting algorithm
  *
  * TODO optimize the struct in size
  */
 struct Label {
+  static constexpr fragmentidx_t NO_FRAGMENT = PathFragment::NO_PARENT_FRAGMENT;
+  
   stationset_t visitedStations;
   stationidx_t currentStation : packed_data_structure::BITS_PER_STATION_IDX;
   region_t visitedRegions : packed_data_structure::BITS_PER_REGION_SET;
@@ -266,6 +322,7 @@ struct Label {
   disttime_t currentTime; // could be an unsigned int, with less than 32 bits even
   disttime_t currentFuel; // could be an unsigned int, with less than 32 bits even
   score_t score;          // used to explore best labels first
+  fragmentidx_t pathFragment = NO_FRAGMENT;
 
   // arbitrary floats
   // TODO comment
@@ -370,6 +427,13 @@ concept InlineAllocator = requires(const T &constAllocator, T &allocator, S &slo
   // TODO add allocator.setFree(&fromSlot, &toSlot);
 };
 
+/*
+ * An inline allocator is a structure that is able to differenciate
+ * allocated and non-allocated memory for a specific structure.
+ * It does not do proper allocation per-say but it helps allocators
+ * that have no information of (non)allocated memory, like the Clock
+ * Arena Allocator.
+ */
 template<class S>
 struct DefaultInlineAllocator {
   inline bool isFree(const S &slot) const
@@ -392,10 +456,10 @@ TO_REMOVE(public:)
   static constexpr float FREE_SLOTS_THRESHOLD = .05f; // if there are less than 5% free slots left realloc into a bigger array
 
   InlineAllocator m_allocator;
-  S *m_array;
-  size_t m_size;
-  size_t m_next;
-  size_t m_freeSlotCount;
+  S      *m_array;
+  index_t m_next;
+  size_t  m_size;
+  size_t  m_freeSlotCount;
 
 public:
   explicit ClockArenaAllocator(size_t size)
@@ -424,6 +488,7 @@ public:
       for (; m_next < m_size; m_next++) {
         if (m_allocator.isFree(m_array[m_next])) {
           m_freeSlotCount--;
+          assert(m_allocator.isFree(m_array[m_next]));
           return m_next++;
         }
       }
@@ -436,14 +501,18 @@ public:
     if (m_freeSlotCount < m_size * FREE_SLOTS_THRESHOLD || m_freeSlotCount == -1) {
       // no more space, realloc the array
       size_t newSize = (size_t)(m_size * 1.5f);
+      if (newSize > std::numeric_limits<index_t>::max())
+        throw std::runtime_error("Allocated too many objects");
       S *newArray = (S *)realloc(m_array, newSize*sizeof(S));
-      if (!newArray) throw std::runtime_error("Out of memory");
+      if (!newArray)
+        throw std::runtime_error("Out of memory");
       for (size_t i = m_size; i < newSize; i++)
         m_allocator.setFree(&newArray[i]);
       m_freeSlotCount += newSize - m_size;
       m_array = newArray;
       m_size = newSize;
       m_freeSlotCount--;
+      assert(m_allocator.isFree(m_array[m_next]));
       return m_next++;
     }
 
@@ -452,6 +521,7 @@ public:
     for (m_next = 0; m_next < m_size; m_next++) {
       if (m_allocator.isFree(m_array[m_next])) {
         m_freeSlotCount--;
+        assert(m_allocator.isFree(m_array[m_next]));
         return m_next++;
       }
     }
@@ -513,6 +583,68 @@ public:
       PROFILING_COUNTER_INC(labels_realloc);
     m_array[slot] = label;
     return slot;
+  }
+};
+
+struct PathFragmentInlineAllocator {
+  inline bool isFree(const PathFragment &fragment) const
+  {
+    return fragment.isEmpty();
+  }
+
+  inline void setFree(PathFragment *fragment)
+  {
+    fragment->setEmpty();
+  }
+};
+
+class PathFragmentsArena : ClockArenaAllocator<PathFragment, fragmentidx_t, PathFragmentInlineAllocator> 
+{
+public:
+  explicit PathFragmentsArena(size_t size)
+    : ClockArenaAllocator(size)
+  {
+  }
+
+  inline fragmentidx_t pushInitial(stationidx_t station)
+  {
+    fragmentidx_t slot = ClockArenaAllocator::alloc();
+    m_array[slot] = PathFragment(station, PathFragment::NO_PARENT_FRAGMENT);
+    return slot;
+  }
+
+  inline fragmentidx_t push(stationidx_t station, fragmentidx_t parent)
+  {
+    assert(parent != -1 && !m_allocator.isFree(m_array[parent]));
+    fragmentidx_t slot = ClockArenaAllocator::alloc();
+    m_array[slot] = PathFragment(station, parent);
+    m_array[parent].setUseCount(m_array[parent].getUseCount() + 1);
+    return slot;
+  }
+
+  inline void release(fragmentidx_t fragmentIdx)
+  {
+    if (fragmentIdx == Label::NO_FRAGMENT)
+      return;
+
+    PathFragment &fragment = m_array[fragmentIdx];
+    assert(!m_allocator.isFree(fragment));
+
+    uint8_t newUseCount = fragment.getUseCount()-1;
+    if (newUseCount == 0) {
+      //std::cout << "R(" << fragmentIdx << ")";
+      assert(fragmentIdx != PathFragment::NO_PARENT_FRAGMENT);
+      if(fragment.getPreviousFragment() != PathFragment::NO_PARENT_FRAGMENT)
+        release(fragment.getPreviousFragment());
+      ClockArenaAllocator::free(fragmentIdx);
+    } else {
+      fragment.setUseCount(newUseCount);
+    }
+  }
+
+  const PathFragment &operator[](fragmentidx_t idx)
+  {
+    return ClockArenaAllocator::operator[](idx);
   }
 };
 
@@ -690,13 +822,6 @@ typedef FullAdjencyMatrix AdjencyMatrix; // maybe not completely up to date
 typedef PartialAdjencyMatrix AdjencyMatrix;
 #endif
 
-#if USE_SMALL_UNROLLED_PATH
-typedef std::vector<bool> UnrolledPath;
-#else
-typedef bool *UnrolledPath;
-#endif
-
-
 #if 1
 static void writeDistanceMatrix(PartialAdjencyMatrix &matrix)
 {
@@ -796,15 +921,18 @@ class LabelSetting {
 private:
   static constexpr region_t NO_REGION = 0;
 
-  LabelsArena           m_labels = LabelsArena(20'000); // start with min. 20k labels, it will surely grow during execution
+  const ProblemMap     *m_geomap;
+  const BreitlingData  *m_dataset;
+
   AdjencyMatrix         m_adjencyMatrix;
   std::vector<region_t> m_stationRegions;
   std::vector<region_t> m_stationExtendedRegions;
-  const ProblemMap     *m_geomap;
-  const BreitlingData  *m_dataset;
+
   distance_t            m_minDistancePerRemainingRegionCount[breitling_constraints::MANDATORY_REGION_COUNT + 1];
   distance_t            m_minDistancePerRemainingStationCount[breitling_constraints::MINIMUM_STATION_COUNT + 1];
-  UnrolledPath          m_unrolledPathVisitedStations;
+
+  LabelsArena           m_labels = LabelsArena(20'000); // start with min. 20k labels, it will surely grow during execution
+  PathFragmentsArena    m_fragments = PathFragmentsArena(20'000);
   BestLabelsQueue       m_bestLabelsQueue;
   std::vector<std::vector<labelidx_t>> m_labelsPerStationsIndex;
 
@@ -924,22 +1052,8 @@ public:
       }
     }
 
-#if USE_SMALL_UNROLLED_PATH
-    m_unrolledPathVisitedStations.resize(stationCount);
-#else
-    m_unrolledPathVisitedStations = new bool[stationCount];
-#endif
-
-
     writeDistanceMatrix(m_adjencyMatrix);
     writeRegions(m_stationRegions, m_stationExtendedRegions, *m_geomap);
-  }
-
-  ~LabelSetting()
-  {
-#if !USE_SMALL_UNROLLED_PATH
-    delete[] m_unrolledPathVisitedStations;
-#endif
   }
 
 private:
@@ -1052,50 +1166,6 @@ private:
     }
   }
 
-  std::vector<ProblemStation> reconstitutePath(const stationset_t visitedStations)
-  {
-    assert(visitedStations[0]);
-
-    std::list<stationidx_t> pathStations; // unordered
-
-    // start at 1 to avoid including the start station
-    for (stationidx_t i = 1; i < visitedStations.size(); i++) {
-      if (visitedStations[i])
-        pathStations.emplace_back(i);
-    }
-
-    assert(pathStations.size() == breitling_constraints::MINIMUM_STATION_COUNT-1);
-
-    std::vector<ProblemStation> path; // actual path
-    path.reserve(breitling_constraints::MINIMUM_STATION_COUNT);
-    path.push_back((*m_geomap)[0]); // start station
-
-    Location currentLoc = path[0].getLocation();
-    while (!pathStations.empty()) {
-      // find the closest station
-      auto nextBest = pathStations.begin();
-      disttime_t nextBestDist = geometry::distance((*m_geomap)[*nextBest].getLocation(), currentLoc);
-      auto it = pathStations.begin(); ++it;
-      for ( ; it != pathStations.end(); it++) {
-        disttime_t itDist = geometry::distance((*m_geomap)[*it].getLocation(), currentLoc);
-        if (itDist < nextBestDist) {
-          nextBest = it;
-          nextBestDist = itDist;
-        }
-      }
-
-      // add it to the path
-      path.push_back((*m_geomap)[*nextBest]);
-      // remove it from the remaining stations list
-      pathStations.erase(nextBest);
-
-      currentLoc = path[path.size() - 1].getLocation();
-    }
-    
-    // TODO make sure that the found path is doable and valid
-    return path;
-  }
-
   bool dominates(const Label &dominating, const Label &dominated)
   {
     return
@@ -1103,24 +1173,23 @@ private:
       //dominating.visitedStationCount >= dominated.visitedStationCount && (dominated.visitedRegions & ~dominating.visitedRegions) == 0
       && dominating.currentFuel >= dominated.currentFuel // the dominating has at lest as much fuel
       && dominating.currentTime <= dominated.currentTime // the dominating is at most as late
-      && dominating.currentStation == dominated.currentStation // the two are at the same station // TODO use a map? to only check dominations on the same station
+      //&& dominating.currentStation == dominated.currentStation // the two are at the same station // not necessary as an index on currentStation is used
       // no need to check visited station/region counts as all stations visited by the
       // dominated label are also visited by the dominating label
       ;
   }
 
-  //void removeLabelFromExplorableSets(labelidx_t labelIndex)
-  //{
-  //  const Label &removedLabel = m_labels[labelIndex];
-  //  DEBUG_PRINT((int)removedLabel.currentStation << " -> " << (int)labelIndex);
-  //  // remove from the index
-  //  auto &indexSet = m_labelsPerStationsIndex[removedLabel.currentStation];
-  //  auto it = std::find(indexSet.begin(), indexSet.end(), labelIndex);
-  //  assert(it != indexSet.end());
-  //  indexSet.erase(it);
-  //  // remove from the queue (and the pool)
-  //  m_labels.queue_remove(labelIndex); // TODO fix allocation/deallocation of labels
-  //}
+  std::vector<ProblemStation> reconstitutePath(fragmentidx_t endFragment)
+  {
+    std::vector<ProblemStation> path;
+    while (endFragment != PathFragment::NO_PARENT_FRAGMENT) {
+      const PathFragment &fragment = m_fragments[endFragment];
+      path.push_back((*m_geomap)[fragment.getStationIdx()]);
+      endFragment = fragment.getPreviousFragment();
+    }
+    assert(path.size() == breitling_constraints::MINIMUM_STATION_COUNT);
+    return path;
+  }
 
 #if 0 // FIX remove
 public:
@@ -1149,8 +1218,9 @@ public:
 public:
   std::vector<ProblemStation> labelSetting()
   {
-    disttime_t bestTime = std::numeric_limits<disttime_t>::max();
-    stationset_t bestPath;
+    constexpr disttime_t noBestTime = std::numeric_limits<disttime_t>::max();
+    disttime_t bestTime = noBestTime;
+    fragmentidx_t bestPath = Label::NO_FRAGMENT;
 
     const stationidx_t lastStation = m_geomap->size() - 1;
 
@@ -1164,9 +1234,10 @@ public:
       initialLabel.currentStation = 0; // originate from station 0
       initialLabel.visitedStations[initialLabel.currentStation] = true;
       initialLabel.visitedRegions = m_stationRegions[initialLabel.currentStation];
-      //initialLabel.visitedRegions = 0b1111; // FIX remove
+      initialLabel.visitedRegions = 0b1111; // FIX remove
       initialLabel.visitedStationCount = 1;
-      initialLabel.score = 0.f;
+      initialLabel.score = 0.f; // score does not matter, the initial label will be explored first
+      initialLabel.pathFragment = m_fragments.pushInitial(initialLabel.currentStation);
       labelidx_t initialIndex = m_labels.push(initialLabel);
       m_labelsPerStationsIndex[initialLabel.currentStation].push_back(initialIndex);
     }
@@ -1189,12 +1260,12 @@ public:
 
       // the lower bound may have been lowered since the label was added, if
       // it is no longer of intereset discard it before doing any exploration
-      if (lowerBound(explored) > bestTime)
+      if (bestTime != noBestTime && lowerBound(explored) > bestTime)
         continue;
 
       // explore the current label to discover new possible *and interesting* paths
       explore(explored, bestTime, explorationLabels);
-      assert(explorationLabels.size() <= 127); // this is assumed by the PathFragment structure TODO use constants/remove (structure changed)
+      assert(explorationLabels.size() <= 127); // this is assumed by the PathFragment structure TODO use constants
 
       for (Label &nextLabel : explorationLabels) {
         assert(!nextLabel.visitedStations[lastStation]);
@@ -1203,15 +1274,17 @@ public:
           distance_t distanceToComplete = m_adjencyMatrix.distanceToTargetStation(nextLabel.currentStation);
           if (nextLabel.currentFuel > distanceToComplete &&
               nextLabel.currentTime + distanceToComplete < bestTime &&
-              utils::countRegions(nextLabel.visitedRegions | m_stationRegions[m_geomap->size()-1]) == breitling_constraints::MANDATORY_REGION_COUNT) {
+              utils::countRegions(nextLabel.visitedRegions | m_stationRegions[lastStation]) == breitling_constraints::MANDATORY_REGION_COUNT) {
             // path is completeable and better than the best one found so far
-            bestPath = nextLabel.visitedStations;
-            bestPath[lastStation] = true;
+            if (bestTime != noBestTime)
+              m_fragments.release(bestPath);
+            bestPath = m_fragments.push(lastStation, nextLabel.pathFragment);
             bestTime = nextLabel.currentTime + distanceToComplete;
             std::cout << "improved " << bestTime << std::endl;
           }
         } else {
           // remove dominated labels
+          // this assumes explore() did not produce two labels with one dominating the other
           std::vector<labelidx_t> &otherLabelsAtSameStation = m_labelsPerStationsIndex[nextLabel.currentStation];
           auto it = otherLabelsAtSameStation.begin();
           bool nextIsDominated = false;
@@ -1221,28 +1294,36 @@ public:
               nextIsDominated = true;
               break;
             } else if (dominates(nextLabel, otherLabel)) {
+              // release the dominated label
               m_bestLabelsQueue.remove(*it);
-              m_labels[*it].setEmpty(); // release the dominated label
+              m_fragments.release(m_labels[*it].pathFragment);
+              m_labels.free(*it);
               it = otherLabelsAtSameStation.erase(it);
             } else {
               it++;
             }
           }
           if (!nextIsDominated) {
+            // create a fragment, was not done before because labels that are immediately discarded
+            // do not need to create fragments
+            nextLabel.pathFragment = m_fragments.push(nextLabel.currentStation, m_labels[exploredIndex].pathFragment);
             // append the new label to the open list
-            labelidx_t nextIndex = m_labels.push(nextLabel); // may invalidate &explored
-            m_labelsPerStationsIndex[nextLabel.currentStation].push_back(nextIndex);
-            DEBUG_PRINT((int)nextLabel.currentStation << " <- " << (int)nextIndex);
+            labelidx_t nextLabelIndex = m_labels.push(nextLabel); // may invalidate &explored and &nextLabel cannot be written to anymore
+            m_labelsPerStationsIndex[nextLabel.currentStation].push_back(nextLabelIndex);
+            DEBUG_PRINT((int)nextLabel.currentStation << " <- " << (int)nextLabelIndex);
             PROFILING_COUNTER_INC(discovered_label);
           }
         }
       }
+
+      //m_fragments.release(m_labels[exploredIndex].pathFragment); // TODO free fragments of labels with no children that are still in m_labels because they can still dominate other labels, but do not free fragments of labels that got dominated but had their fragments already freed
+
       explorationLabels.clear();
 
       std::cout << (int)m_labels[exploredIndex].visitedStationCount << " ";
-      if (iteration % 1000 == 0) {
-        std::cout << std::endl;
-      }
+      //if (iteration % 1000 == 0) {
+      //  std::cout << std::endl;
+      //}
 
       PROFILING_COUNTER_INC(label_explored);
     }

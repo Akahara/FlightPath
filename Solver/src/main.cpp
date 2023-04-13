@@ -98,6 +98,7 @@ int main()
     //testWriteMapDists(map, "test_dist3.svg");
     //testWriteMapDists(map, "test_dist4.svg");
 
+    // keep half the stations
     map.getStations().erase(
       std::remove_if(map.getStations().begin(), map.getStations().end(), [](auto&) { return rand() & 1; }),
       map.getStations().end());
