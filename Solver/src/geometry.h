@@ -29,7 +29,7 @@ inline nauticmiles_t distance(const Location &p1, const Location &p2)
     return acos(sin(la1) * sin(la2) + cos(la1) * cos(la2) * cos(lo2 - lo1)) * geography::EARTH_RADIUS_NM;
 }
 
-inline double cap(const Location &p1 , const Location &p2)
+inline double cap(const Location &p1, const Location &p2)
 {
     double d_lon = deg2rad(p2.lon - p1.lon);
     double lat_1 = deg2rad(p1.lat);

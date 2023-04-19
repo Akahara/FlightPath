@@ -1,6 +1,7 @@
 #pragma once
 
 #include <cmath>
+#include <iostream>
 
 typedef double nauticmiles_t;
 typedef double km_t;
@@ -90,4 +91,10 @@ inline nauticmiles_t km2nauticmiles(km_t kilometers)
     return kilometers / NAUTICMILES_TO_KILOMETERS_FACTOR;
 }
 
+}
+
+inline std::ostream &operator<<(std::ostream &stream, const Location &loc)
+{
+  stream << loc.lat << "N" << loc.lon << "E";
+  return stream;
 }

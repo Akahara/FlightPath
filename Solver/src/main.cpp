@@ -8,6 +8,7 @@
 #include "geoserializer/csvserializer.h"
 #include "breitling/breitlingsolver.h"
 #include "breitling/label_setting_breitling.h"
+#include "breitling/breitlingnatural.h"
 
 ProblemMap adaptMapToProblemMap(const GeoMap &map)
 {
@@ -80,7 +81,8 @@ int main()
 
     //std::unique_ptr<GeoSerializer> serializer = std::make_unique<XLSSerializer>();
     std::unique_ptr<GeoSerializer> serializer = std::make_unique<CSVSerializer>();
-    std::unique_ptr<PathSolver> solver = std::make_unique<LabelSettingBreitlingSolver>(breitlingData);
+    //std::unique_ptr<PathSolver> solver = std::make_unique<LabelSettingBreitlingSolver>(breitlingData);
+    std::unique_ptr<PathSolver> solver = std::make_unique<NaturalBreitlingSolver>(breitlingData);
 
     try {
       //map = serializer->parseMap("Spreadsheet.xlsx");
@@ -97,9 +99,9 @@ int main()
     //testWriteMapDists(map, "test_dist4.svg");
 
     // keep half the stations
-    map.getStations().erase(
-      std::remove_if(map.getStations().begin(), map.getStations().end(), [](auto&) { return rand() & 1; }),
-      map.getStations().end());
+    //map.getStations().erase(
+    //  std::remove_if(map.getStations().begin(), map.getStations().end(), [](auto&) { return rand() & 1; }),
+    //  map.getStations().end());
     problemMap = adaptMapToProblemMap(map);
 
     std::cout << "Map loaded with " << map.getStations().size() << " stations" << std::endl;
