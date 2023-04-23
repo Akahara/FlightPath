@@ -29,6 +29,14 @@ inline nauticmiles_t distance(const Location &p1, const Location &p2)
     return acos(sin(la1) * sin(la2) + cos(la1) * cos(la2) * cos(lo2 - lo1)) * geography::EARTH_RADIUS_NM;
 }
 
+inline Location interpolateLocations(const Location &l1, const Location &l2, float x)
+{
+  // linear interpolation, not exact because lon/lat coordinates cannot be interpolated
+  // linearly but good enough for now (on France's map lon/lat can almost be interpreted
+  // as xy coordinates)
+  return Location(l1.lon + (l2.lon - l1.lon) * x, l1.lat + (l2.lat - l1.lat) * x);
+}
+
 inline double cap(const Location &p1, const Location &p2)
 {
     double d_lon = deg2rad(p2.lon - p1.lon);

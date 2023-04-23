@@ -31,9 +31,13 @@ void interface_mock::writePathToFile(const ProblemMap &geomap, const Path &path,
     << "\" xmlns=\"http://www.w3.org/2000/svg\">\n";
 
   for (const ProblemStation &station : geomap) {
-    float red = station.canBeUsedToFuel() ? 1 : 0;
-    float green = .5f;
-    float blue = station.isAccessibleAtNight() ? 1 : 0;
+    // black - all good
+    // pink - no fuel  no night
+    // blue - no night
+    // red - no fuel
+    float red = station.canBeUsedToFuel() ? 0 : 1;
+    float green = .1f;
+    float blue = station.isAccessibleAtNight() ? 0 : 1;
     file
       << "<circle cx=\"" << station.getLocation().lon << "\" cy=\"" << station.getLocation().lat << "\" r=\".1\" "
       << "fill=\"rgb(" << red*255 << "," << green*255 << "," << blue*255 << ")\"/>\n";
