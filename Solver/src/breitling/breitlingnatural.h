@@ -7,8 +7,6 @@
 #include "../geometry.h"
 
 
-
-
 class NaturalBreitlingSolver : public PathSolver {
 private:
   typedef double disttime_t;
@@ -28,10 +26,18 @@ private:
     region_t regionId = -1;
   };
 
+  struct ResolutionState {
+    std::vector<std::vector<const Station*>> closedStations;
+    disttime_t currentTime = 0;
+    disttime_t remainingFuel = 0;
+    size_t targetIdx = 0;
+    Path path;
+  };
+
 private:
   BreitlingData m_dataset;
   disttime_t m_planeCapacity;
-
+  
 public:
   NaturalBreitlingSolver(const BreitlingData &dataset)
     : m_dataset(dataset), m_planeCapacity(dataset.planeFuelCapacity / dataset.planeFuelUsage)
@@ -41,8 +47,8 @@ public:
   virtual Path solveForPath(const ProblemMap &map) override;
 
 private:
-  std::list<PathTarget> generateTargets(const ProblemMap &map);
-  const ProblemStation *nearestAccessible(const ProblemMap &map, const Path &currentPath, disttime_t remainingFuelCapacity, disttime_t currentTime, Location location);
+  std::vector<PathTarget> generateTargets(const ProblemMap &map);
+  const ProblemStation *nearestAccessible(const ProblemMap &map, const ResolutionState &state, Location location);
 
   inline disttime_t getTimeDistance(const Location &l1, const Location &l2)
   {
@@ -54,5 +60,13 @@ private:
     // distance is analogous to time
     time = fmod(time, 24.f);
     return time < m_dataset.nauticalDaytime || time > m_dataset.nauticalNighttime;
+  }
+
+  inline bool doesPathCoverTarget(const Path &path, const PathTarget &target)
+  {
+    for (const Station *station : path.getStations())
+      if (getTimeDistance(station->getLocation(), target.location) < target.radius)
+        return true;
+    return false;
   }
 };
