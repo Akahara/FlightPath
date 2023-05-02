@@ -21,10 +21,10 @@ ProblemMap adaptMapToProblemMap(const GeoMap &map)
   return adapted;
 }
 
-void testWriteMapDists(const GeoMap &geomap, const char *fileName)
+void testWriteMap(const ProblemMap &map, const char *fileName)
 {
   std::ofstream file{ fileName };
-  Location point = geomap.getStations()[rand() % geomap.getStations().size()].getLocation();
+  Location point = map[rand() % map.size()].getLocation();
   nauticmiles_t maxDist = std::numeric_limits<nauticmiles_t>::lowest();
 
   double
@@ -32,7 +32,7 @@ void testWriteMapDists(const GeoMap &geomap, const char *fileName)
     minLat = std::numeric_limits<double>::max(),
     maxLon = std::numeric_limits<double>::min(),
     maxLat = std::numeric_limits<double>::min();
-  for (const Station &station : geomap.getStations()) {
+  for (const ProblemStation &station : map) {
     double lon = station.getLocation().lon;
     double lat = station.getLocation().lat;
     minLon = std::min(minLon, lon);
@@ -50,14 +50,9 @@ void testWriteMapDists(const GeoMap &geomap, const char *fileName)
     << (maxLat - minLat + 2 * padding)
     << "\" xmlns=\"http://www.w3.org/2000/svg\">\n";
 
-  for (const Station &station : geomap.getStations()) {
-    float dist = geometry::distance(station.getLocation(), point);
-    if (dist == 0)
+  for (const ProblemStation &station : map) {
+    if(station.isAccessibleAtNight())
       file << "<circle cx=\"" << station.getLocation().lon << "\" cy=\"" << station.getLocation().lat << "\" r=\".2\" fill=\"green\"/>";
-    else
-    file << "<circle cx=\"" << station.getLocation().lon << "\" cy=\"" << station.getLocation().lat << "\" r=\".2\" fill=\"" 
-      << "rgb(" << (dist / maxDist)*255 << "," << (dist / maxDist) * 255 << ",1)"
-      << "\"/>\n";
   }
 
   file << "</svg>" << std::endl;
@@ -82,8 +77,8 @@ int main()
 
     //std::unique_ptr<GeoSerializer> serializer = std::make_unique<XLSSerializer>();
     std::unique_ptr<GeoSerializer> serializer = std::make_unique<CSVSerializer>();
-    //std::unique_ptr<PathSolver> solver = std::make_unique<LabelSettingBreitlingSolver>(breitlingData);
-    std::unique_ptr<PathSolver> solver = std::make_unique<NaturalBreitlingSolver>(breitlingData);
+    std::unique_ptr<PathSolver> solver = std::make_unique<LabelSettingBreitlingSolver>(breitlingData);
+    //std::unique_ptr<PathSolver> solver = std::make_unique<NaturalBreitlingSolver>(breitlingData);
 
     try {
       //map = serializer->parseMap("Spreadsheet.xlsx");
@@ -94,16 +89,12 @@ int main()
       return 1;
     }
 
-    //testWriteMapDists(map, "test_dist1.svg");
-    //testWriteMapDists(map, "test_dist2.svg");
-    //testWriteMapDists(map, "test_dist3.svg");
-    //testWriteMapDists(map, "test_dist4.svg");
-
     // keep half the stations
     //map.getStations().erase(
     //  std::remove_if(map.getStations().begin(), map.getStations().end(), [](auto&) { return rand() & 1; }),
     //  map.getStations().end());
     problemMap = adaptMapToProblemMap(map);
+    testWriteMap(problemMap, "test.svg");
 
     std::cout << "Map loaded with " << map.getStations().size() << " stations" << std::endl;
 

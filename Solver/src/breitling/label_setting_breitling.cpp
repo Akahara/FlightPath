@@ -1,5 +1,9 @@
 #include "label_setting_breitling.h"
 
+#ifndef _DEBUG
+#define NDEBUG
+#endif
+
 #include <cstdlib>
 #include <cstring>
 #include <stdint.h>
@@ -17,6 +21,7 @@
 #include <fstream>
 
 #include "../geometry.h"
+#include "breitlingnatural.h"
 
 /*
  * Indices, Allocators and Memory
@@ -156,11 +161,39 @@ typedef uint8_t region_t;       // bit field, 0b1010 means that the 2nd and 4th 
 typedef uint8_t regionidx_t;    // offset in a region_t, ie. regionidx_t=2 means the third region and corresponds to region_t=0b100
 typedef float score_t;
 typedef uint32_t fragmentidx_t; // TODO comment
-typedef std::bitset<packed_data_structure::MAX_SUPPORTED_STATIONS> stationset_t; // TODO comment
+//typedef std::bitset<packed_data_structure::MAX_SUPPORTED_STATIONS> stationset_t; // TODO comment
 
 // make sure that all regions combinations can be represented with region_t
 // TODO change assertions after having optimized the Label struct
-static_assert(breitling_constraints::MANDATORY_REGION_COUNT < sizeof(region_t) *CHAR_BIT);
+static_assert(breitling_constraints::MANDATORY_REGION_COUNT < sizeof(region_t) * CHAR_BIT);
+
+class StationSet {
+private:
+  using word_t = unsigned long long;
+  static constexpr size_t WORD_SIZE = sizeof(word_t) * CHAR_BIT;
+  static constexpr size_t WORD_COUNT = packed_data_structure::MAX_SUPPORTED_STATIONS / WORD_SIZE;
+  word_t m_array[WORD_COUNT]{};
+
+public:
+  bool isSet(size_t stationIdx) const
+  {
+    return m_array[stationIdx / WORD_SIZE] & ( 1ll << (stationIdx & (WORD_SIZE - 1)));
+  }
+
+  void setSet(size_t stationIdx)
+  {
+    m_array[stationIdx / WORD_SIZE] |= 1ll << (stationIdx & (WORD_SIZE - 1));
+  }
+
+  bool contains(const StationSet &other) const
+  {
+    for (size_t i = 0; i < WORD_COUNT; i++)
+      if (other.m_array[i] & ~m_array[i])
+        return false;
+    return true;
+  }
+  
+};
 
 namespace utils {
 
@@ -235,6 +268,11 @@ static inline disttime_t timeDistanceBetweenStations(const ProblemStation &s1, c
   nauticmiles_t realDistance = geometry::distance(s1.getLocation(), s2.getLocation());
   disttime_t timeDistance = realDistance / dataset.planeSpeed;
   return timeDistance;
+}
+
+static inline disttime_t realDistanceToTimeDistance(nauticmiles_t realDistance, const BreitlingData &dataset)
+{
+  return realDistance / dataset.planeSpeed;
 }
 
 static inline disttime_t planeTimeFuelCapacity(const BreitlingData &dataset)
@@ -315,7 +353,7 @@ public:
 struct Label {
   static constexpr fragmentidx_t NO_FRAGMENT = PathFragment::NO_PARENT_FRAGMENT;
   
-  stationset_t visitedStations;
+  StationSet visitedStations;
   stationidx_t currentStation : packed_data_structure::BITS_PER_STATION_IDX;
   region_t visitedRegions : packed_data_structure::BITS_PER_REGION_SET;
   uint8_t visitedStationCount : packed_data_structure::BITS_FOR_VISITED_STATION_COUNT;
@@ -1079,9 +1117,9 @@ private:
     // where "appropriate" means having explored regions at the same rate as explored stations
     score -= std::max(std::abs((float)utils::countRegions(label.visitedRegions) / breitling_constraints::MANDATORY_REGION_COUNT - (float)label.visitedStationCount / breitling_constraints::MINIMUM_STATION_COUNT) - .25f, 0.f);
     // it has fuel, but not too much
-    score += label.currentFuel; // TODO score higher whenever (fuel is high)==(night is soon)
+    score += label.currentFuel * .1f; // TODO score higher whenever (fuel is high)==(night is soon)
     // it is quick
-    score -= label.currentTime;
+    score -= label.currentTime * .3f;
     // TODO there should be factors here, the distance between stations and the plane speed/fuel capacity is ignored
     return score;
 #elif 0
@@ -1096,7 +1134,7 @@ private:
     score += utils::countRegions(label.visitedRegions) * 20;
     score -= label.currentTime * .3f; // TODO find the right factor here
     return score;
-#elif 0
+#elif 1
     float score = 0;
     score += label.visitedStationCount;
     score -= label.currentTime * .3f;
@@ -1106,7 +1144,7 @@ private:
 #endif
   }
 
-  void explore(const Label &source, disttime_t currentBestTime, std::vector<Label> &explorationLabels)
+  inline void explore(const Label &source, disttime_t currentBestTime, std::vector<Label> &explorationLabels)
   {
     region_t currentExtendedRegion = m_stationExtendedRegions[source.currentStation];
     for (size_t i = 0; i < m_adjencyMatrix.adjencyCount(source.currentStation); i++) {
@@ -1116,7 +1154,7 @@ private:
       region_t newLabelVisitedRegions = source.visitedRegions | m_stationRegions[nextStationIdx];
       region_t newLabelExtendedRegion = m_stationExtendedRegions[nextStationIdx];
 
-      if (source.visitedStations[nextStationIdx])
+      if (source.visitedStations.isSet(nextStationIdx))
         continue; // station already visited
       if (distanceToNext > source.currentFuel)
         continue; // not enough fuel
@@ -1146,7 +1184,7 @@ private:
         explorationLabel.currentTime += distanceToNext;
         explorationLabel.visitedRegions = newLabelVisitedRegions;
         explorationLabel.visitedStationCount++;
-        explorationLabel.visitedStations[nextStationIdx] = true;
+        explorationLabel.visitedStations.setSet(nextStationIdx);
         explorationLabel.currentStation = nextStationIdx;
         explorationLabel.score = scoreLabel(explorationLabel);
         assert(explorationLabel.score > Label::MIN_POSSIBLE_SCORE);
@@ -1158,7 +1196,7 @@ private:
         explorationLabel.currentTime += distanceToNext + m_dataset->timeToRefuel;
         explorationLabel.visitedRegions = newLabelVisitedRegions;
         explorationLabel.visitedStationCount++;
-        explorationLabel.visitedStations[nextStationIdx] = true;
+        explorationLabel.visitedStations.setSet(nextStationIdx);
         explorationLabel.currentStation = nextStationIdx;
         explorationLabel.score = scoreLabel(explorationLabel);
         assert(explorationLabel.score > Label::MIN_POSSIBLE_SCORE);
@@ -1166,10 +1204,10 @@ private:
     }
   }
 
-  bool dominates(const Label &dominating, const Label &dominated)
+  inline bool dominates(const Label &dominating, const Label &dominated)
   {
     return
-      (dominated.visitedStations & ~dominating.visitedStations).none() // the dominating label visited at least the stations visited by the dominated label
+      dominating.visitedStations.contains(dominated.visitedStations) // the dominating label visited at least the stations visited by the dominated label
       //dominating.visitedStationCount >= dominated.visitedStationCount && (dominated.visitedRegions & ~dominating.visitedRegions) == 0
       && dominating.currentFuel >= dominated.currentFuel // the dominating has at lest as much fuel
       && dominating.currentTime <= dominated.currentTime // the dominating is at most as late
@@ -1191,30 +1229,6 @@ private:
     return path;
   }
 
-#if 0 // FIX remove
-public:
-  std::vector<Label> getMinVisitedLabels()
-  {
-    std::vector<Label> labels;
-    int minVisited = 999;
-    for (labelidx_t i = 0; i < m_labels.m_size; i++) {
-      const Label &label = m_labels.m_array[i];
-      if (m_labels.isSlotFree(label))
-        continue;
-      if (minVisited > label.visitedStationCount)
-        minVisited = label.visitedStationCount;
-    }
-    for (labelidx_t i = 0; i < m_labels.m_size; i++) {
-      const Label &label = m_labels.m_array[i];
-      if (m_labels.isSlotFree(label))
-        continue;
-      if (minVisited == label.visitedStationCount)
-        labels.push_back(label);
-    }
-    return labels;
-  }
-#endif
-
 public:
   std::vector<ProblemStation> labelSetting()
   {
@@ -1227,12 +1241,16 @@ public:
     std::vector<Label> explorationLabels;
     explorationLabels.reserve(100);
 
+    { // quickly find an upper bound
+      bestTime = utils::realDistanceToTimeDistance(NaturalBreitlingSolver(*m_dataset).solveForPath(*m_geomap).length(), *m_dataset);
+    }
+
     { // create the initial label
       Label initialLabel{};
       initialLabel.currentFuel = utils::planeTimeFuelCapacity(*m_dataset);
       initialLabel.currentTime = m_dataset->departureTime;
       initialLabel.currentStation = 0; // originate from station 0
-      initialLabel.visitedStations[initialLabel.currentStation] = true;
+      initialLabel.visitedStations.setSet(initialLabel.currentStation);
       initialLabel.visitedRegions = m_stationRegions[initialLabel.currentStation];
       initialLabel.visitedRegions = 0b1111; // FIX remove
       initialLabel.visitedStationCount = 1;
@@ -1243,6 +1261,7 @@ public:
     }
 
     size_t iteration = 0;
+    size_t maxDepth = 0;
 
     while (true) {
       iteration++;
@@ -1267,8 +1286,10 @@ public:
       explore(explored, bestTime, explorationLabels);
       assert(explorationLabels.size() <= 127); // this is assumed by the PathFragment structure TODO use constants
 
+      maxDepth = std::max(maxDepth, (size_t)explored.visitedStationCount);
+
       for (Label &nextLabel : explorationLabels) {
-        assert(!nextLabel.visitedStations[lastStation]);
+        assert(!nextLabel.visitedStations.isSet(lastStation));
         if (nextLabel.visitedStationCount == breitling_constraints::MINIMUM_STATION_COUNT - 1) {
           // only 1 station remaining, try to complete the path
           distance_t distanceToComplete = m_adjencyMatrix.distanceToTargetStation(nextLabel.currentStation);
@@ -1319,11 +1340,10 @@ public:
       //m_fragments.release(m_labels[exploredIndex].pathFragment); // TODO free fragments of labels with no children that are still in m_labels because they can still dominate other labels, but do not free fragments of labels that got dominated but had their fragments already freed
 
       explorationLabels.clear();
-
-      std::cout << (int)m_labels[exploredIndex].visitedStationCount << " ";
-      //if (iteration % 1000 == 0) {
-      //  std::cout << std::endl;
-      //}
+      //std::cout << (int)m_labels[exploredIndex].visitedStationCount << " ";
+      if (iteration % 1000 == 0) {
+        std::cout << maxDepth << std::endl;
+      }
 
       PROFILING_COUNTER_INC(label_explored);
     }
