@@ -72,7 +72,7 @@ int main()
     breitlingData.nauticalNighttime = 20;
     breitlingData.planeFuelCapacity = 1000;
     breitlingData.planeSpeed = 100;
-    breitlingData.planeFuelUsage = .01f;
+    breitlingData.planeFuelUsage = .1f;
     breitlingData.timeToRefuel = 0;
 
     //std::unique_ptr<GeoSerializer> serializer = std::make_unique<XLSSerializer>();
@@ -103,6 +103,13 @@ int main()
     std::cout << "Found path of size " << path.size() << " and length " << path.length() << std::endl;
 
     interface_mock::writePathToFile(problemMap, path, "out.svg");
+
+    { // temp
+      std::unique_ptr<PathSolver> solver = std::make_unique<NaturalBreitlingSolver>(breitlingData);
+      path = solver->solveForPath(problemMap);
+      std::cout << "With natural breitling: found path of size " << path.size() << " and length " << path.length() << std::endl;
+      interface_mock::writePathToFile(problemMap, path, "out_natural.svg");
+    }
 
     std::cin.get();
 

@@ -116,6 +116,8 @@
 
 #define TO_REMOVE(x) x
 
+//#define LIMITED_CONCURRENT_LABELS
+
 #ifdef _DEBUG
 
 #define PROFILING_COUNTER_DEF(name) \
@@ -193,6 +195,7 @@ public:
     return true;
   }
   
+  word_t operator[](size_t idx) const { return m_array[idx]; }
 };
 
 namespace utils {
@@ -402,6 +405,13 @@ struct LabelRef {
   float      labelScore;
 };
 
+struct LabelRefComp {
+  bool operator()(const LabelRef &l1, const LabelRef &l2)
+  {
+    return l1.labelScore > l2.labelScore;
+  }
+};
+
 template<class T, typename Compare = std::less<T>>
 class SmallBoundedPriorityQueue {
 private:
@@ -412,7 +422,7 @@ public:
     m_queue.reserve(capacity);
   }
 
-  const T &top()
+  const T &top() const
   {
     return m_queue[0];
   }
@@ -421,6 +431,17 @@ public:
   {
     assert(m_queue.size() > 0);
     m_queue.erase(m_queue.begin());
+  }
+
+  bool empty() const
+  {
+    return m_queue.empty();
+  }
+
+  template<class _Pr>
+  void removeIf(_Pr predicate)
+  {
+    m_queue.erase(std::remove_if(m_queue.begin(), m_queue.end(), predicate), m_queue.end());
   }
 
   template<class K>
@@ -686,6 +707,7 @@ public:
   }
 };
 
+#ifndef LIMITED_CONCURRENT_LABELS
 class BestLabelsQueue {
 private:
   std::vector<LabelRef> m_bestLabels; // TODO using a list here would be better
@@ -742,6 +764,39 @@ public:
     }
   }
 };
+#else
+class BestLabelsQueue {
+private:
+  SmallBoundedPriorityQueue<LabelRef, LabelRefComp> m_bestLabels;
+  const LabelsArena *m_labelsArena;
+public:
+  BestLabelsQueue(const LabelsArena *labelsArena, size_t cacheSize)
+    : m_bestLabels(cacheSize), m_labelsArena(labelsArena)
+  {
+  }
+
+  void remove(labelidx_t labelIndex)
+  {
+    m_bestLabels.removeIf([labelIndex](const LabelRef &r) { return r.labelIndex == labelIndex; });
+  }
+
+  labelidx_t popFront()
+  {
+    if (m_bestLabels.empty())
+      return -1;
+
+    labelidx_t front = m_bestLabels.top().labelIndex;
+    m_bestLabels.pop();
+    return front;
+  }
+
+  void tryInsertInQueue(labelidx_t labelIndex)
+  {
+    float score = m_labelsArena->m_array[labelIndex].score;
+    m_bestLabels.insert({ labelIndex, score });
+  }
+};
+#endif
 
 class PartialAdjencyMatrix {
 private:
@@ -861,7 +916,7 @@ typedef PartialAdjencyMatrix AdjencyMatrix;
 #endif
 
 #if 1
-static void writeDistanceMatrix(PartialAdjencyMatrix &matrix)
+static void writeDistanceMatrix(PartialAdjencyMatrix &matrix, stationidx_t onlyStation=-1)
 {
   std::ofstream file{ "debug_distancematrix.svg" };
 
@@ -898,13 +953,15 @@ static void writeDistanceMatrix(PartialAdjencyMatrix &matrix)
 
   for (size_t i = 0; i < matrix.m_geomap->size(); i++) {
     const ProblemStation &s1 = (*matrix.m_geomap)[i];
+    if (onlyStation != -1 && i != onlyStation)
+      continue;
     int r = rand();
     for (size_t j = 0; j < matrix.adjencyCount(i); j++) {
       stationidx_t n = matrix.getAdjencyNextStation(i, j);
       const ProblemStation &s2 = (*matrix.m_geomap)[n];
       file << "<line x1=\"" << s1.getLocation().lon << "\" y1=\"" << s1.getLocation().lat << "\" "
         << "x2=\"" << s2.getLocation().lon << "\" y2=\"" << s2.getLocation().lat << "\" "
-        << "stroke-width=\".003\" stroke=\"#" << std::hex << r%0xffffff << std::dec << "\" />\n";
+        << "stroke-width=\"" << (onlyStation == -1 ? .003 : .05) << "\" stroke=\"#" << std::hex << r % 0xffffff << std::dec << "\" />\n";
     }
   }
   file << "</svg>" << std::endl;
@@ -952,6 +1009,42 @@ static void writeRegions(const std::vector<region_t> &regions, const std::vector
 
   file << "</svg>" << std::endl;
 }
+
+static void writeStations(const StationSet &stationSet, stationidx_t lastStation, const ProblemMap &map, const std::string &outfile="debug_stations.svg")
+{
+  std::ofstream file{ outfile };
+
+  double
+    minLon = std::numeric_limits<double>::max(),
+    minLat = std::numeric_limits<double>::max(),
+    maxLon = std::numeric_limits<double>::min(),
+    maxLat = std::numeric_limits<double>::min();
+  for (const ProblemStation &station : map) {
+    double lon = station.getLocation().lon;
+    double lat = station.getLocation().lat;
+    minLon = std::min(minLon, lon);
+    minLat = std::min(minLat, lat);
+    maxLon = std::max(maxLon, lon);
+    maxLat = std::max(maxLat, lat);
+  }
+
+  constexpr double padding = 1;
+  file << "<svg viewBox=\""
+    << (minLon - padding) << " "
+    << (minLat - padding) << " "
+    << (maxLon - minLon + 2 * padding) << " "
+    << (maxLat - minLat + 2 * padding)
+    << "\" xmlns=\"http://www.w3.org/2000/svg\">\n";
+
+  for (stationidx_t i = 0; i < map.size(); i++) {
+    const Location &loc = map[i].getLocation();
+    file
+      << "<circle cx=\"" << loc.lon << "\" cy=\"" << loc.lat << "\" r=\".15\" "
+      << "fill=\"" << (i == lastStation ? "blue" : (stationSet.isSet(i) ? "green" : "black")) << "\"/>\n";
+  }
+
+  file << "</svg>" << std::endl;
+}
 #endif
 
 
@@ -982,7 +1075,7 @@ public:
     m_stationExtendedRegions(geomap->size(), NO_REGION),
     m_dataset(dataset),
     m_labelsPerStationsIndex(geomap->size()),
-    m_bestLabelsQueue(&m_labels, 20)
+    m_bestLabelsQueue(&m_labels, 50)
   {
     size_t stationCount = geomap->size();
     constexpr size_t regionCount = breitling_constraints::MANDATORY_REGION_COUNT;
@@ -1090,7 +1183,7 @@ public:
       }
     }
 
-    writeDistanceMatrix(m_adjencyMatrix);
+    writeDistanceMatrix(m_adjencyMatrix, 60);
     writeRegions(m_stationRegions, m_stationExtendedRegions, *m_geomap);
   }
 
@@ -1122,19 +1215,13 @@ private:
     score -= label.currentTime * .3f;
     // TODO there should be factors here, the distance between stations and the plane speed/fuel capacity is ignored
     return score;
-#elif 0
-    // currently there is no label domination implemented, the only reason
-    // to explore one label before another is to lower the upper bound on
-    // total time spent
-    // to do that we score labels only depending on the number of stations
-    // and regions they visited
-
+#elif 1
     float score = 0;
     score += label.visitedStationCount;
     score += utils::countRegions(label.visitedRegions) * 20;
     score -= label.currentTime * .3f; // TODO find the right factor here
     return score;
-#elif 1
+#elif 0
     float score = 0;
     score += label.visitedStationCount;
     score -= label.currentTime * .3f;
@@ -1220,10 +1307,13 @@ private:
   std::vector<ProblemStation> reconstitutePath(fragmentidx_t endFragment)
   {
     std::vector<ProblemStation> path;
-    while (endFragment != PathFragment::NO_PARENT_FRAGMENT) {
+    while (true) {
       const PathFragment &fragment = m_fragments[endFragment];
       path.push_back((*m_geomap)[fragment.getStationIdx()]);
-      endFragment = fragment.getPreviousFragment();
+      fragmentidx_t parent = fragment.getPreviousFragment();
+      if (parent == endFragment)
+        break; // end of the path reached
+      endFragment = parent;
     }
     assert(path.size() == breitling_constraints::MINIMUM_STATION_COUNT);
     return path;
@@ -1232,17 +1322,17 @@ private:
 public:
   std::vector<ProblemStation> labelSetting()
   {
-    constexpr disttime_t noBestTime = std::numeric_limits<disttime_t>::max();
+    const stationidx_t lastStation = m_geomap->size() - 1;
+
+    disttime_t noBestTime = std::numeric_limits<disttime_t>::max();
     disttime_t bestTime = noBestTime;
     fragmentidx_t bestPath = Label::NO_FRAGMENT;
-
-    const stationidx_t lastStation = m_geomap->size() - 1;
 
     std::vector<Label> explorationLabels;
     explorationLabels.reserve(100);
 
     { // quickly find an upper bound
-      bestTime = utils::realDistanceToTimeDistance(NaturalBreitlingSolver(*m_dataset).solveForPath(*m_geomap).length(), *m_dataset);
+      noBestTime = bestTime = utils::realDistanceToTimeDistance(NaturalBreitlingSolver(*m_dataset).solveForPath(*m_geomap).length(), *m_dataset);
     }
 
     { // create the initial label
@@ -1252,16 +1342,18 @@ public:
       initialLabel.currentStation = 0; // originate from station 0
       initialLabel.visitedStations.setSet(initialLabel.currentStation);
       initialLabel.visitedRegions = m_stationRegions[initialLabel.currentStation];
-      initialLabel.visitedRegions = 0b1111; // FIX remove
+      initialLabel.visitedRegions = 0;
       initialLabel.visitedStationCount = 1;
       initialLabel.score = 0.f; // score does not matter, the initial label will be explored first
       initialLabel.pathFragment = m_fragments.pushInitial(initialLabel.currentStation);
       labelidx_t initialIndex = m_labels.push(initialLabel);
       m_labelsPerStationsIndex[initialLabel.currentStation].push_back(initialIndex);
+      m_bestLabelsQueue.tryInsertInQueue(initialIndex);
     }
 
     size_t iteration = 0;
     size_t maxDepth = 0;
+    size_t solutionsFound = 0;
 
     while (true) {
       iteration++;
@@ -1299,9 +1391,12 @@ public:
             // path is completeable and better than the best one found so far
             if (bestTime != noBestTime)
               m_fragments.release(bestPath);
+            // nextLabel had its parent pathFragment until now
+            nextLabel.pathFragment = m_fragments.push(nextLabel.currentStation, m_labels[exploredIndex].pathFragment);
             bestPath = m_fragments.push(lastStation, nextLabel.pathFragment);
             bestTime = nextLabel.currentTime + distanceToComplete;
             std::cout << "improved " << bestTime << std::endl;
+            writeStations(nextLabel.visitedStations, lastStation, *m_geomap, "out_"+std::to_string(solutionsFound++)+".svg");
           }
         } else {
           // remove dominated labels
@@ -1311,15 +1406,15 @@ public:
           bool nextIsDominated = false;
           while (it != otherLabelsAtSameStation.end()) {
             Label &otherLabel = m_labels[*it];
-            if (dominates(otherLabel, nextLabel)) {
-              nextIsDominated = true;
-              break;
-            } else if (dominates(nextLabel, otherLabel)) {
+            if (dominates(nextLabel, otherLabel)) {
               // release the dominated label
               m_bestLabelsQueue.remove(*it);
               m_fragments.release(m_labels[*it].pathFragment);
               m_labels.free(*it);
               it = otherLabelsAtSameStation.erase(it);
+            } else if (dominates(otherLabel, nextLabel)) {
+              nextIsDominated = true;
+              break;
             } else {
               it++;
             }
@@ -1331,6 +1426,7 @@ public:
             // append the new label to the open list
             labelidx_t nextLabelIndex = m_labels.push(nextLabel); // may invalidate &explored and &nextLabel cannot be written to anymore
             m_labelsPerStationsIndex[nextLabel.currentStation].push_back(nextLabelIndex);
+            m_bestLabelsQueue.tryInsertInQueue(nextLabelIndex);
             DEBUG_PRINT((int)nextLabel.currentStation << " <- " << (int)nextLabelIndex);
             PROFILING_COUNTER_INC(discovered_label);
           }
@@ -1340,21 +1436,25 @@ public:
       //m_fragments.release(m_labels[exploredIndex].pathFragment); // TODO free fragments of labels with no children that are still in m_labels because they can still dominate other labels, but do not free fragments of labels that got dominated but had their fragments already freed
 
       explorationLabels.clear();
-      //std::cout << (int)m_labels[exploredIndex].visitedStationCount << " ";
-      if (iteration % 1000 == 0) {
+
+      if (iteration % 1000 == 0)
         std::cout << maxDepth << std::endl;
+      if (iteration == 50000) {
+        std::cout << "Breaking after a lot of iterations" << std::endl;
+        break;
       }
 
       PROFILING_COUNTER_INC(label_explored);
     }
 
-    std::cout << "Found with time=" << bestTime << " distance=" << bestTime*m_dataset->planeSpeed << std::endl;
 
-    if (bestTime != std::numeric_limits<disttime_t>::max()) {
+    if (bestTime != noBestTime) {
+      std::cout << "Found with time=" << bestTime << " distance=" << bestTime*m_dataset->planeSpeed << std::endl;
       // a path was found, but is was not stored *as a path* but as a "visited station set"
       // so we must reconstitute it first
       return reconstitutePath(bestPath);
     } else {
+      std::cout << "No path found" << std::endl;
       // did not find a valid path
       return {};
     }
