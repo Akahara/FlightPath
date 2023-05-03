@@ -7,6 +7,9 @@
 
 #include "../geometry.h"
 
+#include <fstream>
+std::ofstream DBG_FILE{ "temp.svg" };
+
 /**
  * The idea of this algorithm is to set "targets" allong an imaginary
  * path that goes through all 4 regions and then iterate to find the
@@ -114,6 +117,26 @@ std::vector<NaturalBreitlingSolver::PathTarget> NaturalBreitlingSolver::generate
     target.expectedStepsToReach = accumulatedDistance/totalDistance * totalSteps;
   }
 
+  for (const ProblemStation &station : map) {
+    // black - all good
+    // pink - no fuel  no night
+    // blue - no night
+    // red - no fuel
+    float red = station.canBeUsedToFuel() ? 0 : 1;
+    float green = .1f;
+    float blue = station.isAccessibleAtNight() ? 0 : 1;
+    DBG_FILE << "<circle cx=\"" << station.getLocation().lon << "\" cy=\"" << station.getLocation().lat << "\" r=\".1\" " << "fill=\"rgb(" << red * 255 << "," << green * 255 << "," << blue * 255 << ")\"/>\n";
+
+    for (auto &target : targets) {
+      if (getTimeDistance(target.location, station.getLocation()) < target.radius)
+        DBG_FILE << "<rect x=\"" << station.getLocation().lon - .15 << "\" y=\"" << station.getLocation().lat - .15 << "\" " << "stroke-width=\".05\" stroke=\"orange\" width = \".3\" height=\".3\" />";
+    }
+    if (breitling_constraints::isStationInMandatoryRegion(*station.getOriginalStation(), 0)) DBG_FILE << "<rect x=\"" << station.getLocation().lon - .1 << "\" y=\"" << station.getLocation().lat - .1 << "\" " << "stroke-width=\".05\" stroke=\"blue\" width = \".2\" height=\".2\" fill=\"transparent\" />";
+    if (breitling_constraints::isStationInMandatoryRegion(*station.getOriginalStation(), 1)) DBG_FILE << "<rect x=\"" << station.getLocation().lon - .1 << "\" y=\"" << station.getLocation().lat - .1 << "\" " << "stroke-width=\".05\" stroke=\"green\" width = \".2\" height=\".2\" fill=\"transparent\" />";
+    if (breitling_constraints::isStationInMandatoryRegion(*station.getOriginalStation(), 2)) DBG_FILE << "<rect x=\"" << station.getLocation().lon - .1 << "\" y=\"" << station.getLocation().lat - .1 << "\" " << "stroke-width=\".05\" stroke=\"red\" width = \".2\" height=\".2\" fill=\"transparent\" />";
+    if (breitling_constraints::isStationInMandatoryRegion(*station.getOriginalStation(), 3)) DBG_FILE << "<rect x=\"" << station.getLocation().lon - .1 << "\" y=\"" << station.getLocation().lat - .1 << "\" " << "stroke-width=\".05\" stroke=\"purple\" width = \".2\" height=\".2\" fill=\"transparent\" />";
+  }
+
   return targets;
 }
 
@@ -144,6 +167,29 @@ const ProblemStation *NaturalBreitlingSolver::nearestAccessible(const ProblemMap
 
 Path NaturalBreitlingSolver::solveForPath(const ProblemMap &map)
 {
+  double
+    minLon = std::numeric_limits<double>::max(),
+    minLat = std::numeric_limits<double>::max(),
+    maxLon = std::numeric_limits<double>::min(),
+    maxLat = std::numeric_limits<double>::min();
+  for (const ProblemStation &station : map) {
+    double lon = station.getLocation().lon;
+    double lat = station.getLocation().lat;
+    minLon = std::min(minLon, lon);
+    minLat = std::min(minLat, lat);
+    maxLon = std::max(maxLon, lon);
+    maxLat = std::max(maxLat, lat);
+  }
+
+  constexpr double padding = 1;
+  DBG_FILE << "<svg viewBox=\""
+    << (minLon - padding) << " "
+    << (minLat - padding) << " "
+    << (maxLon - minLon + 2 * padding) << " "
+    << (maxLat - minLat + 2 * padding)
+    << "\" xmlns=\"http://www.w3.org/2000/svg\">\n";
+
+
   const Location destinationLocation = map[m_dataset.targetStation].getLocation();
   const std::vector<PathTarget> targets = generateTargets(map);
 
@@ -167,6 +213,7 @@ Path NaturalBreitlingSolver::solveForPath(const ProblemMap &map)
       if (pathStations.size() <= 1)
         throw std::runtime_error("No possible path with given inputs"); // exhausted all possible paths
 
+      std::cout << "backtrack from " << pathStations.size() << std::endl;
       // backtrack by one station
       state.closedStations[pathStations.size()-1].push_back(pathStations.back());
       pathStations.pop_back();
@@ -175,6 +222,12 @@ Path NaturalBreitlingSolver::solveForPath(const ProblemMap &map)
         state.targetIdx--; // the path no longers goes through the target of the discarded station
 
     } else {
+      float h = (targets.size() - state.targetIdx) / 4.f;
+      DBG_FILE << "<line x1=\"" << currentLocation.lon << "\" y1=\"" << currentLocation.lat << "\" x2=\"" << nearest->getLocation().lon << "\" y2=\"" << nearest->getLocation().lat << "\" stroke=\"rgb(" << h * 0xff << "," << h * 0xff << "," << h * 0xff << ")\" stroke-width=\".05\" />";
+
+      float w = isTimeInNightPeriod(state.currentTime) ? .7 : 1;
+      DBG_FILE << "<circle cx=\"" << nearest->getLocation().lon << "\" cy=\"" << nearest->getLocation().lat << "\" r=\".08\" " << "fill=\"rgb(" << w * 255 << "," << w * 255 << "," << w * 255 << ")\"/>\n";
+
       // advance to the next station
       disttime_t distanceToNext = getTimeDistance(currentLocation, nearest->getLocation());
       state.remainingFuel -= distanceToNext;
@@ -191,10 +244,12 @@ Path NaturalBreitlingSolver::solveForPath(const ProblemMap &map)
         state.closedStations.emplace_back();
       else
         state.closedStations[pathStations.size()].clear();
-      if (pathStations.size() < breitling_constraints::MINIMUM_STATION_COUNT - 1)
+      if (pathStations.size() <= breitling_constraints::MINIMUM_STATION_COUNT - 1)
         state.closedStations[pathStations.size()].push_back(map[m_dataset.targetStation].getOriginalStation());
     }
   }
 
+  DBG_FILE << "</svg>" << std::endl;
+  DBG_FILE.close();
   return state.path;
 }
