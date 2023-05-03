@@ -7,16 +7,17 @@ namespace tsp_optimization {
      * Optimize a path using the 2-opt algorithm.
      * Obviously, this algorithm will not return the optimal path but will only try to improve the given path.
      *
-     * Warning : Even if this algorithm is faster than the 3-opt algorithm, it can still take a long time to compute.
-     * You can limit the time by setting a maxDuration in seconds (use 0 to disable the time limit).
+     * WARNING : Even if this algorithm is faster than the 3-opt algorithm, it can still take a long time to compute.
+     * You can limit the time by setting a timeout in milliseconds (use 0 to disable the time limit).
      *
      * Thread safe
      */
-    Path o2opt(const Path &path, const seconds_t maxDuration) {
+    [[maybe_unused]] [[nodiscard]]
+    Path o2opt(const Path &path, const std::chrono::milliseconds timeout) {
         Path optimizedPath = path;
 
         const auto start_time = std::chrono::steady_clock::now();
-        const auto end_time = start_time + std::chrono::seconds(maxDuration);
+        const auto end_time = start_time + timeout;
 
         bool improved = true;
 
@@ -26,7 +27,7 @@ namespace tsp_optimization {
                 for (size_t j = i + 1; j < (optimizedPath.size() - 1); ++j) {
 
                     // Check if we have exceeded the time limit
-                    if ((std::chrono::seconds(maxDuration) != std::chrono::seconds(0)) && (std::chrono::steady_clock::now() > end_time)) {
+                    if ((timeout != std::chrono::seconds(0)) && (std::chrono::steady_clock::now() > end_time)) {
                         return optimizedPath;
                     }
 
@@ -49,17 +50,17 @@ namespace tsp_optimization {
      * Optimize a path using the 3-opt algorithm.
      * Obviously, this algorithm will not return the optimal path but will only try to improve the given path.
      *
-     * Warning : This algorithm can take a long time to compute.
-     * You can limit the time by setting a max_duration in seconds (use 0 to disable the time limit).
+     * WARNING : This algorithm can take a long time to compute.
+     * You can limit the time by setting a timeout in milliseconds (use 0 to disable the time limit).
      *
      * Thread safe
      */
     [[maybe_unused]] [[nodiscard]]
-    Path o3opt(const Path &path, const seconds_t maxDuration) {
+    Path o3opt(const Path &path, const std::chrono::milliseconds timeout) {
         Path optimizedPath = path;
 
         const auto start_time = std::chrono::steady_clock::now();
-        const auto end_time = start_time + std::chrono::seconds(maxDuration);
+        const auto end_time = start_time + timeout;
 
         bool improved = true;
 
@@ -70,7 +71,7 @@ namespace tsp_optimization {
                     for (size_t k = j + 1; k < (optimizedPath.size() - 1); ++k) {
 
                         // Check if we have exceeded the time limit
-                        if ((std::chrono::seconds(maxDuration) != std::chrono::seconds(0)) && (std::chrono::steady_clock::now() > end_time)) {
+                        if ((timeout != std::chrono::seconds(0)) && (std::chrono::steady_clock::now() > end_time)) {
                             return optimizedPath;
                         }
 
