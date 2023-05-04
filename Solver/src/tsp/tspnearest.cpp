@@ -1,11 +1,5 @@
 #include "tspnearest.h"
-#include "../geometry.h"
 
-
-
-/* ********************************************************************************************* *\
- *                                         NEW FUNCTIONS                                         *
-\* ********************************************************************************************* */
 
 [[nodiscard]]
 Path TspNearest::solveForPath(const GeoMap &map, const Station *const startStation, const Station *const endStation,
@@ -28,20 +22,25 @@ Path TspNearest::solveForPath(const GeoMap &map, const Station *const startStati
 [[nodiscard]]
 Path TspNearest::solveClosedPath(const GeoMap &map, const Station *const startStation,
                                  std::chrono::milliseconds timeout, unsigned int nbThread) const {
-    const unsigned int nbStations = map.getStations().size();
-
     std::vector<std::thread> threads;
 
     // Variables
     Path bestPath;
     nauticmiles_t bestLength = std::numeric_limits<nauticmiles_t>::max();
+    bool stop = false;
 
     // Mutex to protect bestPath and bestLength
     std::mutex mutex;
 
     // Run threads
     for(unsigned int threadIdx = 0; threadIdx < nbThread; ++threadIdx) {
-        threads.emplace_back(&TspNearest::solveClosedPathThread, this, std::ref(map), timeout, nbThread, threadIdx, 3, std::ref(bestPath), std::ref(bestLength), std::ref(mutex));
+        threads.emplace_back(&TspNearest::solveClosedPathThread, this, std::ref(map), nbThread, threadIdx, 3, std::ref(bestPath), std::ref(bestLength), std::ref(mutex), &stop);
+    }
+
+    // If timeout is not 0, wait for it
+    if (timeout != std::chrono::milliseconds(0)) {
+        std::this_thread::sleep_for(timeout);
+        stop = true;
     }
 
     // Wait for threads to finish
@@ -53,10 +52,8 @@ Path TspNearest::solveClosedPath(const GeoMap &map, const Station *const startSt
 }
 
 [[nodiscard]]
-Path TspNearest::solveClosedPathThread(const GeoMap &map, std::chrono::milliseconds timeout, unsigned int nbThread, unsigned int threadIdx,
-                                       unsigned int opt_algo, Path &bestPath, nauticmiles_t &bestLength, std::mutex &mutex) const {
-    auto start = std::chrono::high_resolution_clock::now();
-
+Path TspNearest::solveClosedPathThread(const GeoMap &map, unsigned int nbThread, unsigned int threadIdx,
+                                       unsigned int opt_algo, Path &bestPath, nauticmiles_t &bestLength, std::mutex &mutex, bool *stop) const {
     unsigned int nbStations = map.getStations().size();
     unsigned int firstStationIdx = nbStations * threadIdx / nbThread; // First station to compute with this thread
     unsigned int lastStationIdx = nbStations * (threadIdx + 1) / nbThread; // Last station to compute with this thread
@@ -66,20 +63,12 @@ Path TspNearest::solveClosedPathThread(const GeoMap &map, std::chrono::milliseco
 
         // Compute nearest path
         Path path = nearestNeighborPath(map, startStation, startStation);
-        std::cout << "Start : " << startStation->getOACI() << std::endl;
-
-        auto middle = std::chrono::high_resolution_clock::now();
-        auto remainingTime = std::chrono::milliseconds(timeout.count() - std::chrono::duration_cast<std::chrono::milliseconds>(middle - start).count());
-
-        if (timeout == std::chrono::milliseconds(0)) {
-            remainingTime = std::chrono::milliseconds(0);
-        }
 
         // Optimize path
         if (opt_algo == 2) {
-            path = tsp_optimization::o2opt(path, remainingTime);
+            path = tsp_optimization::o2opt(path, stop);
         } else if (opt_algo == 3) {
-            path = tsp_optimization::o3opt(path, remainingTime);
+            path = tsp_optimization::o3opt(path, stop);
         } else {
             throw std::invalid_argument("Invalid optimization algorithm (must be 2 or 3)");
         }
@@ -90,11 +79,6 @@ Path TspNearest::solveClosedPathThread(const GeoMap &map, std::chrono::milliseco
             bestPath = path;
             bestLength = length;
             mutex.unlock();
-        }
-
-        // Check timeout
-        if (timeout != std::chrono::milliseconds(0) && std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::high_resolution_clock::now() - start).count() > timeout.count()) {
-            break;
         }
     }
 
@@ -179,3 +163,4 @@ Path TspNearest::nearestNeighborPath(const GeoMap &map, const Station *const sta
 
     return path;
 }
+

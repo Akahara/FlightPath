@@ -8,22 +8,24 @@
 
 class TspNearest : public PathSolver {
 public:
-    /* ********************************************************************************************* *\
-     *                                         NEW FUNCTIONS                                         *
-    \* ********************************************************************************************* */
+
+    Path solveForPath(const GeoMap &map) override {return Path{};};
+
     // TODO(Thomas) :doc
     [[nodiscard]]
     Path solveForPath(const GeoMap &map, const Station* const startStation, const Station* const endStation,
                       std::chrono::milliseconds timeout, unsigned int nbThread) const;
 
     // TODO(Thomas) :doc
+    // TODO(Thomas) :distribute stations to threads
+    // TODO(Thomas) :use distance matrix
     [[nodiscard]]
     Path solveClosedPath(const GeoMap &map, const Station *const startStation, std::chrono::milliseconds timeout, unsigned int nbThread) const;
 
     // TODO(Thomas) :doc
     [[nodiscard]]
-    Path solveClosedPathThread(const GeoMap &map, std::chrono::milliseconds timeout, unsigned int nbThread, unsigned int threadIdx,
-                               unsigned int opt_algo, Path &bestPath, nauticmiles_t &bestLength, std::mutex &mutex) const;
+    Path solveClosedPathThread(const GeoMap &map, unsigned int nbThread, unsigned int threadIdx,
+                               unsigned int opt_algo, Path &bestPath, nauticmiles_t &bestLength, std::mutex &mutex, bool *stop = nullptr) const;
 
     /*
      * Compute a path in the map passing through all the stations using the nearest neighbour algorithm.

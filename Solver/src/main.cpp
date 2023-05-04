@@ -14,7 +14,7 @@ int main()
     GeoMap map = serializer.parseMap("aerodromes.xlsx");
 
     // remove all stations after the first
-    map.getStations().erase(map.getStations().begin() + 50, map.getStations().end());
+    map.getStations().erase(map.getStations().begin() + 150, map.getStations().end());
     std::cout << "Number of stations: " << map.getStations().size() << std::endl;
 
     // Create a path
@@ -24,13 +24,13 @@ int main()
 
     auto start = std::chrono::high_resolution_clock::now();
 
-    for (int i = 0; i < 100; ++i) {
-        path = solver.solveClosedPath(map, &map.getStations()[0], std::chrono::milliseconds(0), 7);
+    for (int i = 0; i < 1; ++i) {
+        path = solver.solveClosedPath(map, &map.getStations()[0], std::chrono::milliseconds(0), 1);
     }
 
     auto end = std::chrono::high_resolution_clock::now();
 
-    unsigned int moyenne = std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count() / 100;
+    unsigned int moyenne = std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count() / 1;
 
     std::cout << "Time taken: " << moyenne << " ms" << std::endl;
     std::cout << "Path length: " << path.length() << " nm" << std::endl;
