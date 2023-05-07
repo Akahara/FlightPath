@@ -808,7 +808,7 @@ TO_REMOVE(public:)
   const BreitlingData *m_dataset;
 
 public:
-  PartialAdjencyMatrix(const ProblemMap *geomap, const BreitlingData *dataset)
+  PartialAdjencyMatrix(const ProblemMap *geomap, const BreitlingData *dataset, stationidx_t targetStation)
     : m_adjencyMatrix(geomap->size()),
     m_distanceToTarget(geomap->size()),
     m_distanceToNearestRefuel(geomap->size()),
@@ -825,7 +825,7 @@ public:
         if (i == j)
           continue;
         distance_t distance = utils::timeDistanceBetweenStations((*geomap)[i], (*geomap)[j], *dataset);
-        if (i == geomap->size() - 1)
+        if (i == targetStation)
           m_distanceToTarget[j] = distance;
         else // do not use the target station as a neighbour of any station
           nearestStationsQueue.insert({ distance, j });
@@ -909,11 +909,7 @@ public:
   }
 };
 
-#if USE_FULL_ADJENCY_MATRIX
-typedef FullAdjencyMatrix AdjencyMatrix; // maybe not completely up to date
-#else
 typedef PartialAdjencyMatrix AdjencyMatrix;
-#endif
 
 #if 1
 static void writeDistanceMatrix(PartialAdjencyMatrix &matrix, stationidx_t onlyStation=-1)
@@ -1182,9 +1178,6 @@ public:
         sortedDistances.pop();
       }
     }
-
-    writeDistanceMatrix(m_adjencyMatrix, 60);
-    writeRegions(m_stationRegions, m_stationExtendedRegions, *m_geomap);
   }
 
 private:
@@ -1219,7 +1212,7 @@ private:
     float score = 0;
     score += label.visitedStationCount;
     score += utils::countRegions(label.visitedRegions) * 20;
-    score -= label.currentTime * .3f; // TODO find the right factor here
+    //score -= label.currentTime * .3f; // TODO find the right factor here
     return score;
 #elif 0
     float score = 0;
@@ -1234,6 +1227,7 @@ private:
   inline void explore(const Label &source, disttime_t currentBestTime, std::vector<Label> &explorationLabels)
   {
     region_t currentExtendedRegion = m_stationExtendedRegions[source.currentStation];
+    size_t currentVisitedRegionCount = utils::countRegions(source.visitedRegions);
     for (size_t i = 0; i < m_adjencyMatrix.adjencyCount(source.currentStation); i++) {
       stationidx_t nextStationIdx = m_adjencyMatrix.getAdjencyNextStation(source.currentStation, i);
       const ProblemStation &nextStation = (*m_geomap)[nextStationIdx];
@@ -1249,12 +1243,15 @@ private:
         continue; // 3 regions left to visit but only 2 more stations to go through
       if (!nextStation.canBeUsedToFuel() && source.currentFuel - distanceToNext < m_adjencyMatrix.distanceToNearestStationWithFuel(nextStationIdx))
         continue; // 1 hop is possible, 2 are not because of low fuel
-      if (!nextStation.isAccessibleAtNight() && utils::isTimeInNightPeriod(source.currentTime + distanceToNext, *m_dataset))
+      if (!nextStation.isAccessibleAtNight() && (i != m_geomap->size()-1) && utils::isTimeInNightPeriod(source.currentTime + distanceToNext, *m_dataset))
         continue; // the station is not accessible during the night
       if ((currentExtendedRegion & ~source.visitedRegions) && newLabelExtendedRegion != currentExtendedRegion)
         continue; // Ir strategy: the current region is not explored and the new label is going away
-      if ((currentExtendedRegion & source.visitedRegions) && (newLabelExtendedRegion != currentExtendedRegion) && (source.visitedRegions & newLabelExtendedRegion))
-        continue; // Ir strategy: the current region is explored and the label is going in an already visited extended region
+      if (currentVisitedRegionCount != breitling_constraints::MANDATORY_REGION_COUNT &&
+          (currentExtendedRegion & source.visitedRegions) &&
+          (newLabelExtendedRegion != currentExtendedRegion) &&
+          (source.visitedRegions & newLabelExtendedRegion))
+        continue; // Ir strategy: the current region is explored and the label is going in an already visited extended region, does not apply if all regions are already visited
 
       bool shouldExploreNoRefuel = true;
       bool shouldExploreWithRefuel = nextStation.canBeUsedToFuel();
@@ -1294,9 +1291,9 @@ private:
   inline bool dominates(const Label &dominating, const Label &dominated)
   {
     return
-      dominating.visitedStations.contains(dominated.visitedStations) // the dominating label visited at least the stations visited by the dominated label
-      //dominating.visitedStationCount >= dominated.visitedStationCount && (dominated.visitedRegions & ~dominating.visitedRegions) == 0
-      && dominating.currentFuel >= dominated.currentFuel // the dominating has at lest as much fuel
+      //dominating.visitedStations.contains(dominated.visitedStations) // the dominating label visited at least the stations visited by the dominated label
+      dominating.visitedStationCount == dominated.visitedStationCount && (dominated.visitedRegions & ~dominating.visitedRegions) == 0
+      //&& dominating.currentFuel >= dominated.currentFuel // the dominating has at lest as much fuel
       && dominating.currentTime <= dominated.currentTime // the dominating is at most as late
       //&& dominating.currentStation == dominated.currentStation // the two are at the same station // not necessary as an index on currentStation is used
       // no need to check visited station/region counts as all stations visited by the
@@ -1332,7 +1329,7 @@ public:
     explorationLabels.reserve(100);
 
     { // quickly find an upper bound
-      noBestTime = bestTime = utils::realDistanceToTimeDistance(NaturalBreitlingSolver(*m_dataset).solveForPath(*m_geomap).length(), *m_dataset);
+      //noBestTime = bestTime = utils::realDistanceToTimeDistance(NaturalBreitlingSolver(*m_dataset).solveForPath(*m_geomap).length(), *m_dataset);
     }
 
     { // create the initial label
@@ -1352,7 +1349,6 @@ public:
     }
 
     size_t iteration = 0;
-    size_t maxDepth = 0;
     size_t solutionsFound = 0;
 
     while (true) {
@@ -1378,8 +1374,6 @@ public:
       explore(explored, bestTime, explorationLabels);
       assert(explorationLabels.size() <= 127); // this is assumed by the PathFragment structure TODO use constants
 
-      maxDepth = std::max(maxDepth, (size_t)explored.visitedStationCount);
-
       for (Label &nextLabel : explorationLabels) {
         assert(!nextLabel.visitedStations.isSet(lastStation));
         if (nextLabel.visitedStationCount == breitling_constraints::MINIMUM_STATION_COUNT - 1) {
@@ -1396,7 +1390,7 @@ public:
             bestPath = m_fragments.push(lastStation, nextLabel.pathFragment);
             bestTime = nextLabel.currentTime + distanceToComplete;
             std::cout << "improved " << bestTime << std::endl;
-            writeStations(nextLabel.visitedStations, lastStation, *m_geomap, "out_"+std::to_string(solutionsFound++)+".svg");
+            //writeStations(nextLabel.visitedStations, lastStation, *m_geomap, "out_"+std::to_string(solutionsFound++)+".svg");
           }
         } else {
           // remove dominated labels
@@ -1437,16 +1431,8 @@ public:
 
       explorationLabels.clear();
 
-      if (iteration % 1000 == 0)
-        std::cout << maxDepth << std::endl;
-      if (iteration == 50000) {
-        std::cout << "Breaking after a lot of iterations" << std::endl;
-        break;
-      }
-
       PROFILING_COUNTER_INC(label_explored);
     }
-
 
     if (bestTime != noBestTime) {
       std::cout << "Found with time=" << bestTime << " distance=" << bestTime*m_dataset->planeSpeed << std::endl;

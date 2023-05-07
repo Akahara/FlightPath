@@ -15,8 +15,8 @@ ProblemMap adaptMapToProblemMap(const GeoMap &map)
   ProblemMap adapted;
 
   for (const Station &station : map.getStations())
-    //adapted.push_back(ProblemStation{ &station, station.getNightVFR() == "oui" || station.getNightVFR()=="pcl", station.getFuel() == "oui"}); // TODO properly fill isAccessibleAtNight and canBeUsedToFuel according to the original station data
-  adapted.push_back(ProblemStation{ &station, station.getNightVFR() == "oui", station.getFuel() == "oui"}); // TODO properly fill isAccessibleAtNight and canBeUsedToFuel according to the original station data
+    adapted.push_back(ProblemStation{ &station, station.getNightVFR() == "oui" || station.getNightVFR()=="pcl", station.getFuel() == "oui"}); // TODO properly fill isAccessibleAtNight and canBeUsedToFuel according to the original station data
+  //adapted.push_back(ProblemStation{ &station, station.getNightVFR() == "oui", station.getFuel() == "oui"}); // TODO properly fill isAccessibleAtNight and canBeUsedToFuel according to the original station data
 
   return adapted;
 }
@@ -70,9 +70,9 @@ int main()
     breitlingData.departureTime = 8;
     breitlingData.nauticalDaytime = 8;
     breitlingData.nauticalNighttime = 20;
-    breitlingData.planeFuelCapacity = 1000;
-    breitlingData.planeSpeed = 100;
-    breitlingData.planeFuelUsage = .1f;
+    breitlingData.planeFuelCapacity = 190; // 190L
+    breitlingData.planeSpeed = geography::km2nauticmiles(222); // 222km/h
+    breitlingData.planeFuelUsage = 38; // 38L/h
     breitlingData.timeToRefuel = 0;
 
     //std::unique_ptr<GeoSerializer> serializer = std::make_unique<XLSSerializer>();

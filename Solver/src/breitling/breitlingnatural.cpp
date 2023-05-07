@@ -129,7 +129,7 @@ std::vector<NaturalBreitlingSolver::PathTarget> NaturalBreitlingSolver::generate
 
     for (auto &target : targets) {
       if (getTimeDistance(target.location, station.getLocation()) < target.radius)
-        DBG_FILE << "<rect x=\"" << station.getLocation().lon - .15 << "\" y=\"" << station.getLocation().lat - .15 << "\" " << "stroke-width=\".05\" stroke=\"orange\" width = \".3\" height=\".3\" />";
+        DBG_FILE << "<rect x=\"" << station.getLocation().lon - .15 << "\" y=\"" << station.getLocation().lat - .15 << "\" " << "stroke-width=\".05\" stroke=\"orange\" width = \".3\" height=\".3\" fill=\"transparent\"/>";
     }
     if (breitling_constraints::isStationInMandatoryRegion(*station.getOriginalStation(), 0)) DBG_FILE << "<rect x=\"" << station.getLocation().lon - .1 << "\" y=\"" << station.getLocation().lat - .1 << "\" " << "stroke-width=\".05\" stroke=\"blue\" width = \".2\" height=\".2\" fill=\"transparent\" />";
     if (breitling_constraints::isStationInMandatoryRegion(*station.getOriginalStation(), 1)) DBG_FILE << "<rect x=\"" << station.getLocation().lon - .1 << "\" y=\"" << station.getLocation().lat - .1 << "\" " << "stroke-width=\".05\" stroke=\"green\" width = \".2\" height=\".2\" fill=\"transparent\" />";
