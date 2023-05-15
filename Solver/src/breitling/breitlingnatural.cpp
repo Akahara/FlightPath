@@ -244,7 +244,7 @@ Path NaturalBreitlingSolver::solveForPath(const ProblemMap &map)
         state.closedStations.emplace_back();
       else
         state.closedStations[pathStations.size()].clear();
-      if (pathStations.size() <= breitling_constraints::MINIMUM_STATION_COUNT - 1)
+      if (pathStations.size() < breitling_constraints::MINIMUM_STATION_COUNT - 1)
         state.closedStations[pathStations.size()].push_back(map[m_dataset.targetStation].getOriginalStation());
     }
   }

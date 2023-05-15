@@ -8,6 +8,8 @@ typedef float daytime_t;
 
 // All daytime fields in this struct should be in the 0..24 range
 struct BreitlingData {
+    static constexpr size_t NO_TARGET_STATION = -1; // value of targetStation if none is required
+
     nauticmiles_t planeSpeed;    // nautic miles per hour
     daytime_t nauticalDaytime;   // sunrise time (<nauticalNighttime)
     daytime_t nauticalNighttime; // sunset time (>nauticalDaytime)
@@ -32,7 +34,9 @@ constexpr size_t MANDATORY_REGION_COUNT = 4;
 // The Breitling cup specifies 4 regions to pass through, meaning a path must cross
 // at least one station in each region. Regions are delimited by longitude/latitude lines
 // regions are ordered counter counter clockwise, starting from NE
-bool isStationInMandatoryRegion(const Station &station, unsigned char region);
+bool isStationInMandatoryRegion(const Station &station, size_t region);
+// returns the station's region, or -1 if it is not in any region
+size_t getStationRegion(const Station &station);
 
 // the path must go through 4 stations, one for each cardinal direction
 bool satisfiesRegionsConstraints(const Path &path);
@@ -55,8 +59,5 @@ inline bool isPathValid(const GeoMap &map, const BreitlingData &dataset, const P
         satisfiesFuelConstraints(dataset, path) &&
         satisfiesTimeConstraints(dataset, path);
 }
-
-// a plane can refuel at a station at daytime or during nighttime if the station allows it
-bool canBeUsedToFuel(const BreitlingData &dataset, const Station &station, daytime_t daytime);
 
 }

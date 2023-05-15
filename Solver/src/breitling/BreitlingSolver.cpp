@@ -7,8 +7,9 @@
 
 namespace breitling_constraints {
 
-bool isStationInMandatoryRegion(const Station &station, unsigned char region)
+bool isStationInMandatoryRegion(const Station &station, size_t region)
 {
+  static_assert(MANDATORY_REGION_COUNT == 4);
   switch (region) {
   case 0: return station.getLocation().lon < -1.66;
   case 1: return station.getLocation().lon < 2 && station.getLocation().lat < 44.5;
@@ -16,6 +17,15 @@ bool isStationInMandatoryRegion(const Station &station, unsigned char region)
   case 3: return station.getLocation().lon > 6 && station.getLocation().lat > 46.5;
   default: assert(false); return false;
   }
+}
+
+size_t getStationRegion(const Station &station)
+{
+  for (size_t r = 0; r < MANDATORY_REGION_COUNT; r++) {
+    if (isStationInMandatoryRegion(station, r))
+      return r;
+  }
+  return -1;
 }
 
 bool satisfiesRegionsConstraints(const Path &path)
@@ -46,7 +56,13 @@ bool satisfiesPathConstraints(const GeoMap &map, const BreitlingData &dataset, c
 {
     return path.size() > 0
       && path[0] == map.getStations()[dataset.departureStation] 
-      && path[path.size() - 1] == map.getStations()[dataset.targetStation];
+      && (dataset.targetStation == BreitlingData::NO_TARGET_STATION
+          || path[path.size() - 1] == map.getStations()[dataset.targetStation]);
+}
+
+inline bool canBeUsedToFuel(const BreitlingData &dataset, const Station &station)
+{
+  return true; // TODO implement canBeUsedToFuel based on user inputs (probably stored in dataset)
 }
 
 bool satisfiesFuelConstraints(const BreitlingData &dataset, const Path &path)
@@ -61,8 +77,7 @@ bool satisfiesFuelConstraints(const BreitlingData &dataset, const Path &path)
         nauticmiles_t flightDistance = geometry::distance(path.getStations()[i - 1]->getLocation(), station->getLocation());
         currentDistance += flightDistance;
         distanceSinceLastRefuel += flightDistance;
-        daytime_t currentTime = dataset.departureTime + currentDistance / dataset.planeSpeed;
-        if (!canBeUsedToFuel(dataset, *station, currentTime)) {
+        if (!canBeUsedToFuel(dataset, *station)) {
             float remainingFuel = dataset.planeFuelCapacity - distanceSinceLastRefuel / dataset.planeSpeed * dataset.planeFuelUsage;
             if (remainingFuel < 0)
                 return false;
@@ -77,14 +92,6 @@ bool satisfiesTimeConstraints(const BreitlingData &dataset, const Path &path)
 {
     daytime_t totalTime = path.length() / dataset.planeSpeed;
     return totalTime < MAXIMUM_FLYGHT_DURATION;
-}
-
-bool canBeUsedToFuel(const BreitlingData &dataset, const Station &station, daytime_t daytime)
-{
-    daytime = std::fmod(daytime, 24);
-    return daytime >= dataset.nauticalDaytime && daytime <= dataset.nauticalNighttime
-        //|| station.canFuelAtNightTime() // TODO update the model to consider night time fueling capabilities
-        ;
 }
 
 } // !namespace breitling_constraints

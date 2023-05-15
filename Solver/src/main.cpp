@@ -74,6 +74,7 @@ int main()
     breitlingData.planeSpeed = geography::km2nauticmiles(222); // 222km/h
     breitlingData.planeFuelUsage = 38; // 38L/h
     breitlingData.timeToRefuel = 0;
+    //breitlingData.targetStation = BreitlingData::NO_TARGET_STATION;
 
     //std::unique_ptr<GeoSerializer> serializer = std::make_unique<XLSSerializer>();
     std::unique_ptr<GeoSerializer> serializer = std::make_unique<CSVSerializer>();
@@ -99,6 +100,11 @@ int main()
     std::cout << "Map loaded with " << map.getStations().size() << " stations" << std::endl;
 
     path = solver->solveForPath(problemMap);
+    std::cout << "fuel? " << breitling_constraints::satisfiesFuelConstraints(breitlingData, path) << std::endl;
+    std::cout << "path? " << breitling_constraints::satisfiesPathConstraints(map, breitlingData, path) << std::endl;
+    std::cout << "regions? " << breitling_constraints::satisfiesRegionsConstraints(path) << std::endl;
+    std::cout << "stations? " << breitling_constraints::satisfiesStationCountConstraints(path) << std::endl;
+    std::cout << "time? " << breitling_constraints::satisfiesTimeConstraints(breitlingData, path) << std::endl;
 
     std::cout << "Found path of size " << path.size() << " and length " << path.length() << std::endl;
 
