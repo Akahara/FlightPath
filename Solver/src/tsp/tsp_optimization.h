@@ -2,6 +2,8 @@
 
 #include "../path.h"
 #include "../geometry.h"
+#include "../pathsolver.h"
+#include <iostream>
 
 namespace tsp_optimization {
 
@@ -54,5 +56,8 @@ namespace tsp_optimization {
     // default value for stop is false
     Path o3opt(const Path &path, bool *stop = nullptr);
 
+    /* ----- */
+
+    Path o3opt(const Path &path, const GeoMap &map, bool *stop = nullptr);
 };
 

@@ -56,9 +56,9 @@ Path TspNearest::solveClosedPathThread(const GeoMap &map, unsigned int nbThread,
                                        unsigned int opt_algo, Path &bestPath, nauticmiles_t &bestLength, std::mutex &mutex, bool *stop) const {
     unsigned int nbStations = map.getStations().size();
     unsigned int firstStationIdx = nbStations * threadIdx / nbThread; // First station to compute with this thread
-    unsigned int lastStationIdx = nbStations * (threadIdx + 1) / nbThread; // Last station to compute with this thread
+    unsigned int lastStationIdx = nbStations * (threadIdx + 1) / nbThread - 1; // Last station to compute with this thread
 
-    for (unsigned int idx = firstStationIdx ; idx < lastStationIdx ; ++idx) {
+    for (unsigned int idx = firstStationIdx ; idx <= lastStationIdx ; ++idx) {
         const Station *const startStation = &map.getStations()[idx];
 
         // Compute nearest path
@@ -68,7 +68,7 @@ Path TspNearest::solveClosedPathThread(const GeoMap &map, unsigned int nbThread,
         if (opt_algo == 2) {
             path = tsp_optimization::o2opt(path, stop);
         } else if (opt_algo == 3) {
-            path = tsp_optimization::o3opt(path, stop);
+            path = tsp_optimization::o3opt(path, map, stop);
         } else {
             throw std::invalid_argument("Invalid optimization algorithm (must be 2 or 3)");
         }

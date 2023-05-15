@@ -192,4 +192,63 @@ namespace tsp_optimization {
         }
         return optimizedPath;
     }
+
+    /* ******** */
+
+    Path o3opt(const Path &path, const GeoMap &map, bool *stop) {
+        Path optimizedPath = path;
+
+        std::vector<int> pathOrder{};
+        for (const Station* const station : optimizedPath.getStations()) {
+            int index = std::find(map.getStations().begin(), map.getStations().end(), *station) - map.getStations().begin();
+            pathOrder.push_back(index);
+        }
+
+        std::vector<std::vector<nauticmiles_t>> distances = map.getDistances();
+
+        bool improved = true;
+
+        while (improved) {
+            improved = false;
+            for (size_t i = 0; i < (optimizedPath.size() - 1); ++i) {
+                for (size_t j = i + 1; j < (optimizedPath.size() - 1); ++j) {
+                    for (size_t k = j + 1; k < (optimizedPath.size() - 1); ++k) {
+
+                        // Check if we have exceeded the time limit
+                        if (stop && *stop) {
+                            return optimizedPath;
+                        }
+
+                        // Change path if the new one is better
+                        if (distances[pathOrder[i]][pathOrder[j]] +
+                            distances[pathOrder[i + 1]][pathOrder[k]] +
+                            distances[pathOrder[j + 1]][pathOrder[k + 1]]
+                            <
+                            distances[pathOrder[i]][pathOrder[i + 1]] +
+                            distances[pathOrder[j]][pathOrder[j + 1]] +
+                            distances[pathOrder[k]][pathOrder[k + 1]]) {
+
+                            // Reverse the path between j and k
+                            std::reverse(pathOrder.begin() + j + 1,
+                                         pathOrder.begin() + k + 1);
+
+                            // Reverse the path between i and j
+                            std::reverse(pathOrder.begin() + i + 1,
+                                         pathOrder.begin() + j + 1);
+
+                            improved = true;
+                        }
+                    }
+                }
+            }
+        }
+
+        // convert path order to path
+        optimizedPath.getStations().clear();
+        for (size_t i = 0; i < pathOrder.size(); ++i) {
+            optimizedPath.getStations().push_back(&map.getStations()[pathOrder[i]]);
+        }
+
+        return optimizedPath;
+    }
 }

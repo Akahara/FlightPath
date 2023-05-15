@@ -10,3 +10,6 @@ x64/
 .DS_Store
 .idea/
 cmake-build-debug/
+cmake-build-debug-coverage/
+cmake-build-release/
+out/
