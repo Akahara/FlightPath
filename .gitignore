@@ -12,3 +12,4 @@ x64/
 out/
 cmake-build-debug/
 *.kml
+*.odt
