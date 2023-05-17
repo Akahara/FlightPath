@@ -7,7 +7,7 @@
     <x>0</x>
     <y>0</y>
     <width>922</width>
-    <height>528</height>
+    <height>635</height>
    </rect>
   </property>
   <property name="sizePolicy">
@@ -20,8 +20,8 @@
    <string>MainWindow</string>
   </property>
   <widget class="QWidget" name="centralwidget">
-   <layout class="QHBoxLayout" name="horizontalLayout">
-    <item>
+   <layout class="QFormLayout" name="formLayout_3">
+    <item row="0" column="0">
      <widget class="QSplitter" name="splitter">
       <property name="orientation">
        <enum>Qt::Horizontal</enum>
@@ -70,13 +70,8 @@
              <bool>true</bool>
             </property>
             <property name="currentText">
-             <string>Choisissez</string>
+             <string>TSP</string>
             </property>
-            <item>
-             <property name="text">
-              <string>Choisissez</string>
-             </property>
-            </item>
             <item>
              <property name="text">
               <string notr="true">TSP</string>
@@ -137,11 +132,7 @@
            </widget>
           </item>
           <item row="3" column="1">
-           <widget class="QDoubleSpinBox" name="doubleSpinBox_recharge">
-            <property name="maximum">
-             <double>9999999.990000000223517</double>
-            </property>
-           </widget>
+           <widget class="QDoubleSpinBox" name="doubleSpinBox_recharge"/>
           </item>
           <item row="3" column="2">
            <widget class="QLabel" name="label_15">
@@ -354,11 +345,7 @@
            </widget>
           </item>
           <item row="0" column="1">
-           <widget class="QDoubleSpinBox" name="doubleSpinBox_vitesse">
-            <property name="maximum">
-             <double>9999999.990000000223517</double>
-            </property>
-           </widget>
+           <widget class="QDoubleSpinBox" name="doubleSpinBox_vitesse"/>
           </item>
           <item row="0" column="2">
            <widget class="QLabel" name="label">
@@ -381,11 +368,7 @@
            </widget>
           </item>
           <item row="1" column="1">
-           <widget class="QDoubleSpinBox" name="doubleSpinBox_capacite">
-            <property name="maximum">
-             <double>9999999.990000000223517</double>
-            </property>
-           </widget>
+           <widget class="QDoubleSpinBox" name="doubleSpinBox_capacite"/>
           </item>
           <item row="1" column="2">
            <widget class="QLabel" name="label_9">
@@ -408,11 +391,7 @@
            </widget>
           </item>
           <item row="2" column="1">
-           <widget class="QDoubleSpinBox" name="doubleSpinBox_consommation">
-            <property name="maximum">
-             <double>9999999.990000000223517</double>
-            </property>
-           </widget>
+           <widget class="QDoubleSpinBox" name="doubleSpinBox_consommation"/>
           </item>
           <item row="2" column="2">
            <widget class="QLabel" name="label_10">
@@ -424,10 +403,24 @@
          </layout>
         </item>
         <item>
-         <widget class="QListWidget" name="listWidget_2"/>
+         <widget class="QLabel" name="label_16">
+          <property name="text">
+           <string>Fuel:</string>
+          </property>
+         </widget>
         </item>
         <item>
-         <widget class="QListWidget" name="listWidget_3"/>
+         <widget class="QTableWidget" name="tableWidget_2"/>
+        </item>
+        <item>
+         <widget class="QLabel" name="label_17">
+          <property name="text">
+           <string>Vol de nuit:</string>
+          </property>
+         </widget>
+        </item>
+        <item>
+         <widget class="QTableWidget" name="tableWidget_3"/>
         </item>
         <item>
          <widget class="QPushButton" name="pushButton_calculer">
@@ -446,8 +439,8 @@
       </widget>
      </widget>
     </item>
-    <item>
-     <widget class="QListWidget" name="listWidget_1"/>
+    <item row="0" column="1">
+     <widget class="QTableWidget" name="tableWidget"/>
     </item>
    </layout>
   </widget>
@@ -457,7 +450,7 @@
      <x>0</x>
      <y>0</y>
      <width>922</width>
-     <height>17</height>
+     <height>18</height>
     </rect>
    </property>
   </widget>

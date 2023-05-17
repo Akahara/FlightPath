@@ -1,5 +1,6 @@
 #include "mainwindow.h"
 #include "ui_mainwindow.h"
+#include "excelhelper.h"
 
 MainWindow::MainWindow(QWidget *parent)
     : QMainWindow(parent)
@@ -7,8 +8,14 @@ MainWindow::MainWindow(QWidget *parent)
 {
     ui->setupUi(this);
 
-    ui->listWidget_1->setContentsMargins(10,10,0,0);
+    ui->tableWidget->setContentsMargins(10,10,0,0);
 
+    // Call the function in the ExcelHelper class to load the contents of the Excel file into the QTableWidget
+    ExcelHelper::loadExcelToTableWidget(ui->tableWidget, "E:/001_FA/001_Tours/Cours/S8/Projet Collectif/interface graphique/Interface_Graphique/aerodromes.xlsx");
+
+    ExcelHelper::displayColumnContentsInTableWidget(ui->tableWidget_3, "E:/001_FA/001_Tours/Cours/S8/Projet Collectif/interface graphique/Interface_Graphique/aerodromes.xlsx","VFR nuit");
+
+    ExcelHelper::displayColumnContentsInTableWidget(ui->tableWidget_2, "E:/001_FA/001_Tours/Cours/S8/Projet Collectif/interface graphique/Interface_Graphique/aerodromes.xlsx","Essence");
 }
 
 MainWindow::~MainWindow()
@@ -19,7 +26,7 @@ MainWindow::~MainWindow()
 
 void MainWindow::on_comboBox_choisir_algo_currentIndexChanged(int index)
 {
-    if (index == 1) //TSP
+    if (index == 0)
     {
         ui->label_11->hide();
         ui->label_12->hide();
@@ -32,7 +39,7 @@ void MainWindow::on_comboBox_choisir_algo_currentIndexChanged(int index)
         ui->doubleSpinBox_recharge->hide();
         ui->checkBox_boucle->show();
     }
-    else if(index==2)   //Breitling
+    else
     {
         ui->label_11->show();
         ui->label_12->show();
