@@ -206,7 +206,7 @@ Path NaturalBreitlingSolver::solveForPath(const ProblemMap &map)
 
   while(currentLocation != destinationLocation) {
     const PathTarget &nextTarget = targets[state.targetIdx];
-    const Location expectedTarget = geometry::interpolateLocations(currentLocation, nextTarget.location, 1.f/std::max(1ull, nextTarget.expectedStepsToReach - state.path.size()));
+    const Location expectedTarget = geometry::interpolateLocations(currentLocation, nextTarget.location, 1.f/std::max(1ull, (unsigned long long) nextTarget.expectedStepsToReach - state.path.size()));
     const ProblemStation *nearest = nearestAccessible(map, state, expectedTarget);
 
     if (nearest == nullptr) {

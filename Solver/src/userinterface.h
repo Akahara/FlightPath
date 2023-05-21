@@ -21,7 +21,7 @@ namespace kml_export {
 
 void writeHeader(std::ostream &out);
 void writeFooter(std::ostream &out);
-void writeAllStationsLayer(std::ostream &out, const GeoMap &map);
+void writeAllStationsLayer(std::ostream &out, const ProblemMap &map);
 void writeProblemStationsLayer(std::ostream &out, const ProblemMap &map);
 void writePathLayer(std::ostream &out, const ProblemPath &path, const char *layerName);
 

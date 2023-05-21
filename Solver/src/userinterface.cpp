@@ -140,11 +140,11 @@ void writeStyle(std::ostream &out, const char *styleId, const char *color, const
     "\n</StyleMap>";
 }
 
-void writeStation(std::ostream &out, const Station &station, const char *style)
+void writeStation(std::ostream &out, const ProblemStation &station, const char *style)
 {
   out <<
     "\n<Placemark>"
-    "\n  <name>" << station.getName() << "</name>"
+    "\n  <name>" << station.getOriginalStation()->getName() << "</name>"
     "\n  <styleUrl>#" << style << "</styleUrl>"
     "\n  <Point>"
     "\n    <coordinates>"
@@ -154,15 +154,15 @@ void writeStation(std::ostream &out, const Station &station, const char *style)
     "\n</Placemark>";
 }
 
-void writeAllStationsLayer(std::ostream &out, const GeoMap &map)
+void writeAllStationsLayer(std::ostream &out, const ProblemMap &map)
 {
   const char *styleId = "station-icon";
 
   writeStyle(out, "ff5252ff", styleId, "https://www.gstatic.com/mapspro/images/stock/503-wht-blank_maps.png");
   out <<
     "\n<Folder>"
-    "\n  <name>A�rodromes</name>";
-  for (const Station &station : map.getStations()) {
+    "\n  <name>Aérodromes</name>";
+  for (const ProblemStation &station : map) {
     writeStation(out, station, styleId);
   }
   out <<
@@ -182,7 +182,7 @@ void writeProblemStationsLayer(std::ostream &out, const ProblemMap &map)
   for (const ProblemStation &station : map) {
     if (!station.isAccessibleAtNight())
       continue;
-    writeStation(out, *station.getOriginalStation(), nightAvailableStyle);
+    writeStation(out, station, nightAvailableStyle);
   }
   out <<
     "\n</Folder>";
@@ -193,13 +193,13 @@ void writeProblemStationsLayer(std::ostream &out, const ProblemMap &map)
   for (const ProblemStation &station : map) {
     if (!station.canBeUsedToFuel())
       continue;
-    writeStation(out, *station.getOriginalStation(), fuelAvailableStyle);
+    writeStation(out, station, fuelAvailableStyle);
   }
   out <<
     "\n</Folder>";
 }
 
-void writePathLayer(std::ostream &out, const Path &path, const char *layerName)
+void writePathLayer(std::ostream &out, const ProblemPath &path, const char *layerName)
 {
   const char *pathStyle = "path-path";
   const char *pathIconStyle = "path-icon";
@@ -214,14 +214,14 @@ void writePathLayer(std::ostream &out, const Path &path, const char *layerName)
 
   out <<
     "\n<Placemark>"
-    "\n  <name> Longueur du chemin : " << path.length() << " NM</name>"
+    "\n  <name> Longueur du chemin : " << getLength(path) << " NM</name>"
     "\n  <styleUrl>#" << pathStyle << "</styleUrl>"
     "\n  <LineString>"
     "\n    <tessellate>1</tessellate>"
     "\n    <coordinates>";
 
-  for (const Station *station : path.getStations()) {
-    out << station->getLocation().lon << "," << station->getLocation().lat << ",0\n";
+  for (const ProblemStation &station : path) {
+    out << station.getLocation().lon << "," << station.getLocation().lat << ",0\n";
   }
 
   out << 
@@ -229,9 +229,9 @@ void writePathLayer(std::ostream &out, const Path &path, const char *layerName)
     "\n  </LineString>"
     "\n</Placemark>";
 
-  for (const Station *station : path.getStations()) {
-    bool flagIcon = station == path.getStations().front() || station == path.getStations().back();
-    writeStation(out, *station, flagIcon ? pathFlagStyle : pathIconStyle);
+  for (const ProblemStation &station : path) {
+    bool flagIcon = station == path.front() || station == path.back();
+    writeStation(out, station, flagIcon ? pathFlagStyle : pathIconStyle);
   }
 
   out <<

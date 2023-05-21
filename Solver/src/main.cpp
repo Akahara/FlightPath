@@ -164,7 +164,7 @@ int main() {
 
     std::ofstream kmlFile{ "out.kml" };
     kml_export::writeHeader(kmlFile);
-    kml_export::writeAllStationsLayer(kmlFile, map);
+    kml_export::writeAllStationsLayer(kmlFile, problemMap);
     kml_export::writeProblemStationsLayer(kmlFile, problemMap);
     kml_export::writePathLayer(kmlFile, path, "Chemin");
     kml_export::writeFooter(kmlFile);
