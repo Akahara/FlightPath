@@ -14,3 +14,5 @@ cmake-build-debug/
 cmake-build-debug-coverage/
 cmake-build-release/
 out/
+*.kml
+*.odt

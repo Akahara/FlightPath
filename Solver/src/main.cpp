@@ -98,7 +98,7 @@ int main()
 
     std::cout << "Map loaded with " << map.getStations().size() << " stations" << std::endl;
 
-    path = solver->solveForPath(problemMap);
+    //path = solver->solveForPath(problemMap);
     std::cout << "fuel? " << breitling_constraints::satisfiesFuelConstraints(breitlingData, path) << std::endl;
     std::cout << "path? " << breitling_constraints::satisfiesPathConstraints(map, breitlingData, path) << std::endl;
     std::cout << "regions? " << breitling_constraints::satisfiesRegionsConstraints(path) << std::endl;
@@ -115,6 +115,13 @@ int main()
       std::cout << "With natural breitling: found path of size " << path.size() << " and length " << path.length() << std::endl;
       interface_mock::writePathToFile(problemMap, path, "out_natural.svg");
     }
+
+    std::ofstream kmlFile{ "out.kml" };
+    kml_export::writeHeader(kmlFile);
+    kml_export::writeAllStationsLayer(kmlFile, map);
+    kml_export::writeProblemStationsLayer(kmlFile, problemMap);
+    kml_export::writePathLayer(kmlFile, path, "Chemin");
+    kml_export::writeFooter(kmlFile);
 
     std::cin.get();
 
@@ -154,6 +161,13 @@ int main() {
     std::cout << "Found path of length " << getLength(path) << " in " << std::chrono::duration_cast<std::chrono::milliseconds>(end_time - start_time).count() << "ms" << std::endl;
 
     interface_mock::writePathToFile(problemMap, path, "out.svg");
+
+    std::ofstream kmlFile{ "out.kml" };
+    kml_export::writeHeader(kmlFile);
+    kml_export::writeAllStationsLayer(kmlFile, map);
+    kml_export::writeProblemStationsLayer(kmlFile, problemMap);
+    kml_export::writePathLayer(kmlFile, path, "Chemin");
+    kml_export::writeFooter(kmlFile);
 
     return 0;
 }

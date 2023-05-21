@@ -72,116 +72,170 @@ void interface_mock::writePathToFile(const ProblemMap &geomap, const ProblemPath
   file << "</svg>" << std::endl;
 }
 
-void interface_mock::writePathToKML(const ProblemMap &geomap, const ProblemPath &path, const std::filesystem::path &filePath)
+namespace kml_export {
+
+void writeHeader(std::ostream &out)
 {
-    constexpr char fuel_icon[] = "#icon-1581-FF5252-labelson-nodesc";
-    constexpr char flag_icon[] = "#icon-1661-FF5252-labelson-nodesc";
-    constexpr char station_icon[] = "#icon-1739-FF5252-labelson-nodesc";
+  out << 
+    "<?xml version = \"1.0\" encoding = \"UTF-8\" ?>"
+    "\n<kml xmlns=\"http://www.opengis.net/kml/2.2\">"
+    "\n  <Document>"
+    "\n    <name>Carte</name>"
+    "\n    <description/>";
+}
 
-    std::ofstream file{ filePath };
+void writeFooter(std::ostream &out)
+{
+  out <<
+    "\n  </Document>"
+    "\n</kml>";
+}
 
-    file << "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n"
-            "<kml xmlns=\"http://www.opengis.net/kml/2.2\">\n"
-            "<Document>\n"
-            "<name>Path</name>\n"
-            "<Style id=\"icon-1581-FF5252-labelson-nodesc\">\n"
-            "<IconStyle>\n"
-            "<color>ff5252ff</color>\n"
-            "<scale>1</scale>\n"
-            "<Icon>\n"
-            "<href>https://www.gstatic.com/mapspro/images/stock/503-wht-blank_maps.png</href>\n"
-            "</Icon>\n"
-            "</IconStyle>\n"
-            "<BalloonStyle>\n"
-            "<text><![CDATA[<h3>$[name]</h3>]]></text>\n"
-            "</BalloonStyle>\n"
-            "</Style>\n"
-            "<Style id=\"icon-1661-FF5252-labelson-nodesc\">\n"
-            "<IconStyle>\n"
-            "<color>ff5252ff</color>\n"
-            "<scale>1</scale>\n"
-            "<Icon>\n"
-            "<href>https://www.gstatic.com/mapspro/images/stock/503-wht-blank_maps.png</href>\n"
-            "</Icon>\n"
-            "</IconStyle>\n"
-            "<BalloonStyle>\n"
-            "<text><![CDATA[<h3>$[name]</h3>]]></text>\n"
-            "</BalloonStyle>\n"
-            "</Style>\n"
-            "<Style id=\"icon-1739-FF5252-labelson-nodesc\">\n"
-            "<IconStyle>\n"
-            "<color>ff5252ff</color>\n"
-            "<scale>1</scale>\n"
-            "<Icon>\n"
-            "<href>https://www.gstatic.com/mapspro/images/stock/503-wht-blank_maps.png</href>\n"
-            "</Icon>\n"
-            "</IconStyle>\n"
-            "<BalloonStyle>\n"
-            "<text><![CDATA[<h3>$[name]</h3>]]></text>\n"
-            "</BalloonStyle>\n"
-            "</Style>\n"
-            "<Style id=\"line-000000-2163-nodesc-normal\">\n"
-            "<LineStyle>\n"
-            "<color>ff000000</color>\n"
-            "<width>2.163</width>\n"
-            "</LineStyle>\n"
-            "<BalloonStyle>\n"
-            "<text><![CDATA[<h3>$[name]</h3>]]></text>\n"
-            "</BalloonStyle>\n"
-            "</Style>\n"
-            "<Style id=\"line-000000-2163-nodesc-highlight\">\n"
-            "<LineStyle>\n"
-            "<color>ff000000</color>\n"
-            "<width>3.2445</width>\n"
-            "</LineStyle>\n"
-            "<BalloonStyle>\n"
-            "<text><![CDATA[<h3>$[name]</h3>]]></text>\n"
-            "</BalloonStyle>\n"
-            "</Style>\n"
-            "<StyleMap id=\"line-000000-2163-nodesc\">\n"
-            "<Pair>\n"
-            "<key>normal</key>\n"
-            "<styleUrl>#line-000000-2163-nodesc-normal</styleUrl>\n"
-            "</Pair>\n"
-            "<Pair>\n"
-            "<key>highlight</key>\n"
-            "<styleUrl>#line-000000-2163-nodesc-highlight</styleUrl>\n"
-            "</Pair>\n"
-            "</StyleMap>\n"
-            "<Placemark>\n"
-            "<name> Longueur du chemin : " << getLength(path) << " NM</name>\n"
-            "<styleUrl>#line-000000-2163-nodesc</styleUrl>\n"
-            "<LineString>\n"
-            "<tessellate>1</tessellate>\n"
-            "<coordinates>\n";
+void writeStyle(std::ostream &out, const char *styleId, const char *color, const char *iconHref, bool small=false)
+{
+  out <<
+    "\n<Style id=\"" << styleId << "-normal\">"
+    "\n  <IconStyle>"
+    "\n    <color>" << color << "</color>"
+    "\n    <scale>1</scale>"
+    "\n    <Icon>"
+    "\n      <href>" << iconHref << "</href>"
+    "\n    </Icon>"
+    << (small ? "\n    <hotSpot x=\"32\" xunits=\"pixels\" y=\"64\" yunits=\"insetPixels\"/>" : "") <<
+    "\n  </IconStyle>"
+    "\n  <LabelStyle>"
+    "\n    <scale>0</scale>"
+    "\n  </LabelStyle>"
+    "\n  <BalloonStyle>"
+    "\n    <text><h3>$[name]</h3></text>"
+    "\n  </BalloonStyle>"
+    "\n</Style>";
+  out <<
+    "\n<Style id=\"" << styleId << "-highlight\">"
+    "\n  <IconStyle>"
+    "\n    <color>" << color << "</color>"
+    "\n    <scale>1</scale>"
+    "\n    <Icon>"
+    "\n      <href>" << iconHref << "</href>"
+    "\n    </Icon>"
+    << (small ? "\n    <hotSpot x=\"32\" xunits=\"pixels\" y=\"64\" yunits=\"insetPixels\"/>" : "") <<
+    "\n  </IconStyle>"
+    "\n  <LabelStyle>"
+    "\n    <scale>1</scale>"
+    "\n  </LabelStyle>"
+    "\n  <BalloonStyle>"
+    "\n    <text><h3>$[name]</h3></text>"
+    "\n  </BalloonStyle>"
+    "\n</Style>";
+  out <<
+    "\n<StyleMap id=\"" << styleId << "\">"
+    "\n  <Pair>"
+    "\n    <key>normal</key>"
+    "\n    <styleUrl>#" << styleId << "-normal</styleUrl>"
+    "\n  </Pair>"
+    "\n  <Pair>"
+    "\n    <key>highlight</key>"
+    "\n    <styleUrl>#" << styleId << "-highlight</styleUrl>"
+    "\n  </Pair>"
+    "\n</StyleMap>";
+}
 
-    for (const ProblemStation &station : path) {
-        file << station.getLocation().lon << "," << station.getLocation().lat << ",0\n";
-    }
+void writeStation(std::ostream &out, const Station &station, const char *style)
+{
+  out <<
+    "\n<Placemark>"
+    "\n  <name>" << station.getName() << "</name>"
+    "\n  <styleUrl>#" << style << "</styleUrl>"
+    "\n  <Point>"
+    "\n    <coordinates>"
+    "\n      " << station.getLocation().lon << "," << station.getLocation().lat << ",0"
+    "\n    </coordinates>"
+    "\n  </Point>"
+    "\n</Placemark>";
+}
 
-    file << "</coordinates>\n"
-            "</LineString>\n"
-            "</Placemark>\n";
+void writeAllStationsLayer(std::ostream &out, const GeoMap &map)
+{
+  const char *styleId = "station-icon";
 
-    for (const ProblemStation &station : path) {
-        file << "<Placemark>\n"
-                "<name>" << station.getOriginalStation()->getOACI() << "</name>\n"
-                "<styleUrl>";
+  writeStyle(out, "ff5252ff", styleId, "https://www.gstatic.com/mapspro/images/stock/503-wht-blank_maps.png");
+  out <<
+    "\n<Folder>"
+    "\n  <name>A�rodromes</name>";
+  for (const Station &station : map.getStations()) {
+    writeStation(out, station, styleId);
+  }
+  out <<
+    "\n</Folder>";
+}
 
-        if (station == path.front() || station == path.back()) {
-            file << flag_icon;
-        } else {
-            file << station_icon;
-        }
+void writeProblemStationsLayer(std::ostream &out, const ProblemMap &map)
+{
+  const char *fuelAvailableStyle = "station-wfuel-icon";
+  const char *nightAvailableStyle = "station-wnight-icon";
+  writeStyle(out, fuelAvailableStyle, "2a9df0", "https://www.gstatic.com/mapspro/images/stock/1027-biz-gas.png");
+  writeStyle(out, nightAvailableStyle, "f0ac2a", "https://www.gstatic.com/mapspro/images/stock/1005-biz-convenience.png");
 
-        file << "</styleUrl>\n"
-                "<Point>\n"
-                "<coordinates>" << station.getLocation().lon << "," << station.getLocation().lat << ",0</coordinates>\n"
-                "</Point>\n"
-                "</Placemark>\n";
-    }
+  out <<
+    "\n<Folder>"
+    "\n  <name>A�rodromes disponibles de nuit</name>";
+  for (const ProblemStation &station : map) {
+    if (!station.isAccessibleAtNight())
+      continue;
+    writeStation(out, *station.getOriginalStation(), nightAvailableStyle);
+  }
+  out <<
+    "\n</Folder>";
 
-    file << "</Document>\n"
-            "</kml>\n" << std::endl;
+  out <<
+    "\n<Folder>"
+    "\n  <name>A�rodromes avec rechargement possible</name>";
+  for (const ProblemStation &station : map) {
+    if (!station.canBeUsedToFuel())
+      continue;
+    writeStation(out, *station.getOriginalStation(), fuelAvailableStyle);
+  }
+  out <<
+    "\n</Folder>";
+}
+
+void writePathLayer(std::ostream &out, const Path &path, const char *layerName)
+{
+  const char *pathStyle = "path-path";
+  const char *pathIconStyle = "path-icon";
+  const char *pathFlagStyle = "path-flag";
+  writeStyle(out, pathStyle, "ff5252ff", "https://www.gstatic.com/mapspro/images/stock/503-wht-blank_maps.png", true);
+  writeStyle(out, pathIconStyle, "ff5252ff", "https://www.gstatic.com/mapspro/images/stock/503-wht-blank_maps.png", true);
+  writeStyle(out, pathFlagStyle, "ff5252ff", "https://www.gstatic.com/mapspro/images/stock/1195-fac-flag.png");
+
+  out <<
+    "\n<Folder>"
+    "\n  <name>" << layerName << "</name>";
+
+  out <<
+    "\n<Placemark>"
+    "\n  <name> Longueur du chemin : " << path.length() << " NM</name>"
+    "\n  <styleUrl>#" << pathStyle << "</styleUrl>"
+    "\n  <LineString>"
+    "\n    <tessellate>1</tessellate>"
+    "\n    <coordinates>";
+
+  for (const Station *station : path.getStations()) {
+    out << station->getLocation().lon << "," << station->getLocation().lat << ",0\n";
+  }
+
+  out << 
+    "\n    </coordinates>"
+    "\n  </LineString>"
+    "\n</Placemark>";
+
+  for (const Station *station : path.getStations()) {
+    bool flagIcon = station == path.getStations().front() || station == path.getStations().back();
+    writeStation(out, *station, flagIcon ? pathFlagStyle : pathIconStyle);
+  }
+
+  out <<
+    "\n</Folder>";
+}
 
 }
