@@ -13,6 +13,6 @@ private:
 
 namespace interface_mock {
 
-void writePathToFile(const ProblemMap &geomap, const Path &path, const std::filesystem::path &file);
-
+    void writePathToFile(const ProblemMap &geomap, const ProblemPath &path, const std::filesystem::path &file);
+    void writePathToKML(const ProblemMap &geomap, const ProblemPath &path, const std::filesystem::path &file);
 }

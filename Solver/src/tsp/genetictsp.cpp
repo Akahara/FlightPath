@@ -26,7 +26,7 @@ constexpr GeneticParameters defaultGeneticParams()
 template<typename Individual>
 class Genetics {
 protected:
-    std::mt19937 random{rand()}; // accessible to sub-classes
+    std::mt19937 random{static_cast<std::bernoulli_distribution::result_type>(rand())}; // accessible to sub-classes
 public:
     typedef float score_t;
 

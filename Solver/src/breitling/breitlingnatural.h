@@ -3,7 +3,7 @@
 #include <list>
 #include <algorithm>
 
-#include "breitlingsolver.h"
+#include "breitlingSolver.h"
 #include "../geometry.h"
 
 

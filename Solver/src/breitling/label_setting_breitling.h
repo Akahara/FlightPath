@@ -1,6 +1,6 @@
 #pragma once
 
-#include "breitlingsolver.h"
+#include "breitlingSolver.h"
 
 class LabelSettingBreitlingSolver : public PathSolver {
 private:

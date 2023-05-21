@@ -23,12 +23,33 @@ public:
   bool isAccessibleAtNight() const { return m_isAccessibleAtNight; }
   bool canBeUsedToFuel() const { return m_canBeUsedToFuel; }
   const Station *getOriginalStation() const { return m_station; }
+  bool operator==(const ProblemStation &other) const { return m_station == other.m_station; }
 };
 
 typedef std::vector<ProblemStation> ProblemMap;
+typedef std::vector<ProblemStation> ProblemPath;
+
+inline std::vector<std::vector<nauticmiles_t>> getDistancesMatrix(const ProblemMap &map) {
+    std::vector<std::vector<nauticmiles_t>> distances(map.size(), std::vector<nauticmiles_t>(map.size(), 0));
+
+    for (size_t i = 0; i < map.size(); ++i) {
+        for (size_t j = 0; j < map.size(); ++j) {
+            distances[i][j] = geometry::distance(map[i].getLocation(), map[j].getLocation());
+        }
+    }
+
+    return distances;
+}
+
+inline nauticmiles_t getLength(const ProblemPath &path) {
+    nauticmiles_t length = 0;
+    for (size_t i = 1; i < path.size(); i++)
+        length += geometry::distance(path[i].getLocation(), path[i - 1].getLocation());
+    return length;
+}
 
 class PathSolver {
 public:
-    virtual Path solveForPath(const ProblemMap &map) = 0;
+    virtual ProblemPath solveForPath(const ProblemMap &map) = 0;
 };
 

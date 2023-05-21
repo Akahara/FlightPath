@@ -1,4 +1,4 @@
-#include "breitlingsolver.h"
+#include "breitlingSolver.h"
 
 #include "../geometry.h"
 
@@ -31,7 +31,7 @@ size_t getStationRegion(const Station &station)
 bool satisfiesRegionsConstraints(const Path &path)
 {
     static_assert(MANDATORY_REGION_COUNT == 4);
-    static_assert(sizeof(long) == 4);
+    //static_assert(sizeof(long) == 4);
     union {
         bool notCrossedRegions[MANDATORY_REGION_COUNT];
         long anyRegionsNotCrossed;

@@ -6,9 +6,7 @@
 #include "userinterface.h"
 #include "geoserializer/xlsserializer.h"
 #include "geoserializer/csvserializer.h"
-#include "breitling/breitlingsolver.h"
-#include "breitling/label_setting_breitling.h"
-#include "breitling/breitlingnatural.h"
+#include "tsp/tsp_nearest_multistart_opt.h"
 
 ProblemMap adaptMapToProblemMap(const GeoMap &map)
 {
@@ -58,6 +56,7 @@ void testWriteMap(const ProblemMap &map, const char *fileName)
   file << "</svg>" << std::endl;
 }
 
+/*
 int main()
 {
     GeoMap map;
@@ -118,6 +117,43 @@ int main()
     }
 
     std::cin.get();
+
+    return 0;
+}
+ */
+
+int main() {
+    GeoMap map;
+    ProblemMap problemMap;
+    XLSSerializer serializer;
+    ProblemPath path;
+
+    map = serializer.parseMap("aerodromes.xlsx");
+
+    //map.getStations().erase(map.getStations().begin() + 50, map.getStations().end());
+    std::cout << "Number of stations: " << map.getStations().size() << std::endl;
+
+    problemMap = adaptMapToProblemMap(map);
+
+    unsigned int nb_threads = 6;
+    unsigned int opt_algo = 3;
+    //const ProblemStation *start = &problemMap[0];
+    //const ProblemStation *end = &problemMap[2];
+    //const ProblemStation *end = nullptr;
+    bool stop = false;
+    bool boucle = false;
+
+    TspNearestMultistartOptSolver solver(nb_threads, opt_algo, boucle, &stop, nullptr, nullptr);
+
+
+    auto start_time = std::chrono::high_resolution_clock::now();
+    path = solver.solveForPath(problemMap);
+    auto end_time = std::chrono::high_resolution_clock::now();
+
+
+    std::cout << "Found path of length " << getLength(path) << " in " << std::chrono::duration_cast<std::chrono::milliseconds>(end_time - start_time).count() << "ms" << std::endl;
+
+    interface_mock::writePathToFile(problemMap, path, "out.svg");
 
     return 0;
 }
