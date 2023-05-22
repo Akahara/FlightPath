@@ -27,11 +27,11 @@ private:
   };
 
   struct ResolutionState {
-    std::vector<std::vector<const Station*>> closedStations;
+    std::vector<std::vector<ProblemStation>> closedStations;
     disttime_t currentTime = 0;
     disttime_t remainingFuel = 0;
     size_t targetIdx = 0;
-    Path path;
+    ProblemPath path;
   };
 
 private:
@@ -44,7 +44,7 @@ public:
   {
   }
 
-  virtual Path solveForPath(const ProblemMap &map) override;
+  virtual ProblemPath solveForPath(const ProblemMap &map) override;
 
 private:
   std::vector<PathTarget> generateTargets(const ProblemMap &map);
@@ -62,10 +62,10 @@ private:
     return time < m_dataset.nauticalDaytime || time > m_dataset.nauticalNighttime;
   }
 
-  inline bool doesPathCoverTarget(const Path &path, const PathTarget &target)
+  inline bool doesPathCoverTarget(const ProblemPath &path, const PathTarget &target)
   {
-    for (const Station *station : path.getStations())
-      if (getTimeDistance(station->getLocation(), target.location) < target.radius)
+    for (const ProblemStation &station : path)
+      if (getTimeDistance(station.getLocation(), target.location) < target.radius)
         return true;
     return false;
   }

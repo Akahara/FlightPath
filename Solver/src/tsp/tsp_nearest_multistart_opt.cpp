@@ -91,7 +91,7 @@ void TspNearestMultistartOptSolver::solveMultiStartThread(const ProblemMap &map,
 
         // Start and end stations are not defined and the path is not a cycle (case 1)
         if (m_startStation == nullptr && !m_loop) {
-            int max, current, idx = 0;
+            int max = 0, current = 0, idx = 0;
             for (int i = 0; i < path.size() - 2; i++) { // First to second last station
                 current = geometry::distance(path[i].getLocation(), path[i + 1].getLocation());
                 if (current > max) {

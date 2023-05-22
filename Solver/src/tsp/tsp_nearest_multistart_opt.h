@@ -1,6 +1,8 @@
 #pragma once
 
 #include <thread>
+#include <mutex>
+#include <assert.h>
 
 #include "../pathsolver.h"
 #include "tsp_optimization.h"

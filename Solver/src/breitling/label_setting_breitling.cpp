@@ -939,9 +939,9 @@ private:
 #endif
   }
 
-  std::vector<ProblemStation> reconstitutePath(fragmentidx_t endFragment)
+  ProblemPath reconstitutePath(fragmentidx_t endFragment)
   {
-    std::vector<ProblemStation> path;
+    ProblemPath path;
     while (true) {
       const PathFragment &fragment = m_fragments[endFragment];
       path.push_back((*m_geomap)[fragment.getStationIdx()]);
@@ -955,17 +955,8 @@ private:
     return path;
   }
 
-  Path problemPathToPath(const std::vector<ProblemStation> &path)
-  {
-    Path actualPath;
-    actualPath.getStations().reserve(path.size());
-    for (size_t i = 0; i < path.size(); i++)
-      actualPath.getStations().push_back(path[i].getOriginalStation());
-    return actualPath;
-  }
-
 public:
-  Path labelSetting()
+  ProblemPath labelSetting()
   {
     fragmentidx_t bestPath = Label::NO_FRAGMENT;
 
@@ -1086,7 +1077,7 @@ public:
       std::cout << "Found with time=" << finalTime << " distance=" << finalTime*m_dataset->planeSpeed << std::endl;
       // a path was found, but is was not stored *as a path* but as a
       // collection of path fragments so we must reconstitute it first
-      return problemPathToPath(reconstitutePath(bestPath));
+      return reconstitutePath(bestPath);
     } else {
       // did not find a valid path
 #ifdef USE_HEURISTIC_LOWER_BOUND
@@ -1100,7 +1091,7 @@ public:
   }
 };
 
-Path LabelSettingBreitlingSolver::solveForPath(const ProblemMap &map)
+ProblemPath LabelSettingBreitlingSolver::solveForPath(const ProblemMap &map)
 {
   // prepare the dataset & geomap, that means having the departure 
   // station at index 0 in the geomap, the target station at index N-1

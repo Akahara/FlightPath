@@ -11,5 +11,5 @@ public:
   {
   }
 
-  virtual Path solveForPath(const ProblemMap &map) override;
+  virtual ProblemPath solveForPath(const ProblemMap &map) override;
 };

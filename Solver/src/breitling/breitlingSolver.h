@@ -39,19 +39,19 @@ bool isStationInMandatoryRegion(const Station &station, size_t region);
 size_t getStationRegion(const Station &station);
 
 // the path must go through 4 stations, one for each cardinal direction
-bool satisfiesRegionsConstraints(const Path &path);
+bool satisfiesRegionsConstraints(const ProblemPath &path);
 // the path must go through a set number of stations
-bool satisfiesStationCountConstraints(const Path &path);
+bool satisfiesStationCountConstraints(const ProblemPath &path);
 // the path must start and end at set cities
-bool satisfiesPathConstraints(const GeoMap &map, const BreitlingData &dataset, const Path &path);
+bool satisfiesPathConstraints(const ProblemMap &map, const BreitlingData &dataset, const ProblemPath &path);
 // the path must allow the plane to not go out of fuel, it is assumed that the plane fuels up at *every* station when possible
-bool satisfiesFuelConstraints(const BreitlingData &dataset, const Path &path);
+bool satisfiesFuelConstraints(const BreitlingData &dataset, const ProblemPath &path);
 // the whole path must not take too long
-bool satisfiesTimeConstraints(const BreitlingData &dataset, const Path &path);
+bool satisfiesTimeConstraints(const BreitlingData &dataset, const ProblemPath &path);
 
 // check all satisfiesXXConstraints, users may want to check time constraints separately because
 // slow planes simply cannot go through the set number of stations in due time
-inline bool isPathValid(const GeoMap &map, const BreitlingData &dataset, const Path &path)
+inline bool isPathValid(const ProblemMap &map, const BreitlingData &dataset, const ProblemPath &path)
 {
     return satisfiesRegionsConstraints(path) &&
         satisfiesStationCountConstraints(path) &&

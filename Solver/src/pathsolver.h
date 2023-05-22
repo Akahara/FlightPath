@@ -24,6 +24,8 @@ public:
   bool canBeUsedToFuel() const { return m_canBeUsedToFuel; }
   const Station *getOriginalStation() const { return m_station; }
   bool operator==(const ProblemStation &other) const { return m_station == other.m_station; }
+  bool operator!=(const ProblemStation &other) const { return m_station != other.m_station; }
+  bool operator<(const ProblemStation &other) const { return m_station < other.m_station; } // necessary for std::set<ProblemStation>
 };
 
 typedef std::vector<ProblemStation> ProblemMap;
@@ -41,6 +43,7 @@ inline std::vector<std::vector<nauticmiles_t>> getDistancesMatrix(const ProblemM
     return distances;
 }
 
+// should be namespaced
 inline nauticmiles_t getLength(const ProblemPath &path) {
     nauticmiles_t length = 0;
     for (size_t i = 1; i < path.size(); i++)

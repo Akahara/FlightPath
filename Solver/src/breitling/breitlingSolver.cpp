@@ -28,44 +28,39 @@ size_t getStationRegion(const Station &station)
   return -1;
 }
 
-bool satisfiesRegionsConstraints(const Path &path)
+bool satisfiesRegionsConstraints(const ProblemPath &path)
 {
     static_assert(MANDATORY_REGION_COUNT == 4);
-    //static_assert(sizeof(long) == 4);
+    static_assert(sizeof(uint32_t) == 4);
     union {
         bool notCrossedRegions[MANDATORY_REGION_COUNT];
-        long anyRegionsNotCrossed;
+        uint32_t anyRegionsNotCrossed;
     };
     anyRegionsNotCrossed = 0;
     notCrossedRegions[0] = notCrossedRegions[1] = notCrossedRegions[2] = notCrossedRegions[3] = true;
     for(size_t i = 0; i < path.size() && anyRegionsNotCrossed; i++) {
-        const Station *s = path.getStations()[i];
+        const ProblemStation &s = path[i];
         for(size_t r = 0; r < MANDATORY_REGION_COUNT; r++)
-            notCrossedRegions[r] = notCrossedRegions[r] && !isStationInMandatoryRegion(*s, r);
+            notCrossedRegions[r] = notCrossedRegions[r] && !isStationInMandatoryRegion(*s.getOriginalStation(), r);
     }
     return anyRegionsNotCrossed == 0;
 }
 
-bool satisfiesStationCountConstraints(const Path &path)
+bool satisfiesStationCountConstraints(const ProblemPath &path)
 {
-    std::set<const Station*> distinctStations(path.getStations().begin(), path.getStations().end());
+    std::set<ProblemStation> distinctStations(path.begin(), path.end());
     return distinctStations.size() >= MINIMUM_STATION_COUNT;
 }
 
-bool satisfiesPathConstraints(const GeoMap &map, const BreitlingData &dataset, const Path &path)
+bool satisfiesPathConstraints(const ProblemMap &map, const BreitlingData &dataset, const ProblemPath &path)
 {
     return path.size() > 0
-      && path[0] == map.getStations()[dataset.departureStation] 
+      && path[0] == map[dataset.departureStation] 
       && (dataset.targetStation == BreitlingData::NO_TARGET_STATION
-          || path[path.size() - 1] == map.getStations()[dataset.targetStation]);
+          || path[path.size() - 1] == map[dataset.targetStation]);
 }
 
-inline bool canBeUsedToFuel(const BreitlingData &dataset, const Station &station)
-{
-  return true; // TODO implement canBeUsedToFuel based on user inputs (probably stored in dataset)
-}
-
-bool satisfiesFuelConstraints(const BreitlingData &dataset, const Path &path)
+bool satisfiesFuelConstraints(const BreitlingData &dataset, const ProblemPath &path)
 {
     assert(dataset.planeFuelUsage > 0);
     assert(dataset.planeSpeed > 0);
@@ -73,11 +68,11 @@ bool satisfiesFuelConstraints(const BreitlingData &dataset, const Path &path)
     nauticmiles_t currentDistance = 0;
     nauticmiles_t distanceSinceLastRefuel = 0;
     for (size_t i = 1; i < path.size(); i++) {
-        const Station *station = path.getStations()[i];
-        nauticmiles_t flightDistance = geometry::distance(path.getStations()[i - 1]->getLocation(), station->getLocation());
+        const ProblemStation &station = path[i];
+        nauticmiles_t flightDistance = geometry::distance(path[i - 1].getLocation(), station.getLocation());
         currentDistance += flightDistance;
         distanceSinceLastRefuel += flightDistance;
-        if (!canBeUsedToFuel(dataset, *station)) {
+        if (!station.canBeUsedToFuel()) {
             float remainingFuel = dataset.planeFuelCapacity - distanceSinceLastRefuel / dataset.planeSpeed * dataset.planeFuelUsage;
             if (remainingFuel < 0)
                 return false;
@@ -88,9 +83,9 @@ bool satisfiesFuelConstraints(const BreitlingData &dataset, const Path &path)
     return true;
 }
 
-bool satisfiesTimeConstraints(const BreitlingData &dataset, const Path &path)
+bool satisfiesTimeConstraints(const BreitlingData &dataset, const ProblemPath &path)
 {
-    daytime_t totalTime = path.length() / dataset.planeSpeed;
+    daytime_t totalTime = getLength(path) / dataset.planeSpeed;
     return totalTime < MAXIMUM_FLYGHT_DURATION;
 }
 
