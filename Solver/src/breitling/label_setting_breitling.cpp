@@ -115,7 +115,7 @@
  * the found path length is used as a lower bound for the label setting */
 //#define USE_HEURISTIC_LOWER_BOUND
 /* maximum search time, in seconds */
-#define LIMITED_SEARCH_TIME 15
+//#define LIMITED_SEARCH_TIME 15
 
 
 /**
@@ -956,7 +956,7 @@ private:
   }
 
 public:
-  ProblemPath labelSetting()
+  ProblemPath labelSetting(bool *stopFlag)
   {
     fragmentidx_t bestPath = Label::NO_FRAGMENT;
 
@@ -988,7 +988,8 @@ public:
     size_t solutionsFound = 0;
     long long searchBeginTime = utils::currentTimeMs();
 
-    while (true) {
+    // loop until we forcibly stop the algorithm, a second stopping condition is in the loop
+    while (stopFlag==nullptr || !*stopFlag) {
       iteration++;
       // take the best label currently yet-to-be-explored
       labelidx_t exploredIndex = m_bestLabelsQueue.popFront();
@@ -1091,11 +1092,11 @@ public:
   }
 };
 
-ProblemPath LabelSettingBreitlingSolver::solveForPath(const ProblemMap &map)
+ProblemPath LabelSettingBreitlingSolver::solveForPath(const ProblemMap &map, bool *stopFlag)
 {
   // prepare the dataset & geomap, that means having the departure 
   // station at index 0 in the geomap, the target station at index N-1
   //m_dataset.targetStation = BreitlingData::NO_TARGET_STATION;
   LabelSetting labelSetting{ &map, &m_dataset };
-  return labelSetting.labelSetting();
+  return labelSetting.labelSetting(stopFlag);
 }

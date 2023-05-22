@@ -12,7 +12,6 @@ private:
     unsigned int m_nbThread;
     unsigned int m_optAlgo;
     bool m_loop;
-    bool *m_stop;
     const ProblemStation *m_startStation;
     const ProblemStation *m_endStation;
 
@@ -37,9 +36,9 @@ public:
      *          - invalid_argument exception if the number of threads is 0
      *          - invalid_argument exception if the optimization algorithm is invalid
      */
-    TspNearestMultistartOptSolver(unsigned int nbThread, unsigned int optAlgo, bool loop, bool *stop, const ProblemStation *startStation,
+    TspNearestMultistartOptSolver(unsigned int nbThread, unsigned int optAlgo, bool loop, const ProblemStation *startStation,
                                   const ProblemStation *endStation)
-      : m_nbThread(nbThread), m_optAlgo(optAlgo), m_loop(loop), m_stop(stop), m_startStation(startStation), m_endStation(endStation)
+      : m_nbThread(nbThread), m_optAlgo(optAlgo), m_loop(loop), m_startStation(startStation), m_endStation(endStation)
     {
         // Check arguments
         if (nbThread == 0) {
@@ -66,7 +65,7 @@ public:
      * This method is multi-threaded and will use the number of threads specified in the constructor.
      */
     [[nodiscard]]
-    ProblemPath solveForPath(const ProblemMap &map);
+    virtual ProblemPath solveForPath(const ProblemMap &map, bool *stopFlag=nullptr) override;
 
 private:
     /*
@@ -76,7 +75,7 @@ private:
      * This method is used by the different threads.
      */
     void solveMultiStartThread(const ProblemMap &map, std::vector<const ProblemStation *> &leftStations,
-                               ProblemPath &bestPath, nauticmiles_t &bestLength, std::mutex &mutex) const;
+                               ProblemPath &bestPath, nauticmiles_t &bestLength, std::mutex &mutex, bool *stopFlag) const;
 
     /*
      * Compute a path in the map passing through all the stations using the nearest neighbour algorithm.

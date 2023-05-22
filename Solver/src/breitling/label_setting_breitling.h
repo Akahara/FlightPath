@@ -11,5 +11,5 @@ public:
   {
   }
 
-  virtual ProblemPath solveForPath(const ProblemMap &map) override;
+  virtual ProblemPath solveForPath(const ProblemMap &map, bool *stopFlag=nullptr) override;
 };

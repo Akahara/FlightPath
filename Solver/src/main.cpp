@@ -111,11 +111,11 @@ void testTSP()
   bool stop = false;
   bool boucle = false;
 
-  TspNearestMultistartOptSolver solver(nb_threads, opt_algo, boucle, &stop, nullptr, nullptr);
+  TspNearestMultistartOptSolver solver(nb_threads, opt_algo, boucle, nullptr, nullptr);
 
 
   auto start_time = std::chrono::high_resolution_clock::now();
-  path = solver.solveForPath(problemMap);
+  path = solver.solveForPath(problemMap, &stop);
   auto end_time = std::chrono::high_resolution_clock::now();
 
 

@@ -34,7 +34,7 @@ public:
     virtual score_t scoreIndividual(const Individual &ind) = 0;
     virtual Individual mutateIndividual(const Individual &parent) = 0;
 
-    Individual runEvolution(const GeneticParameters &params=defaultGeneticParams())
+    Individual runEvolution(bool *stopFlag=nullptr, const GeneticParameters &params=defaultGeneticParams())
     {
         assert(params.keptIndividualCount < params.generationSize);
         assert(params.keptIndividualCount > 0);
@@ -45,7 +45,7 @@ public:
 
         genRandomIndividuals(individuals);
         
-        for (size_t i = 0; i < params.generationCount; i++) {
+        for (size_t i = 0; i < params.generationCount && (stopFlag==nullptr || !*stopFlag); i++) {
             // score individuals
             for (size_t j = 0; j < individuals.size(); j++)
                 scores[j] = { scoreIndividual(individuals[j]), j };
@@ -123,8 +123,8 @@ public:
     }
 };
 
-ProblemPath GeneticTSPSolver::solveForPath(const ProblemMap &map)
+ProblemPath GeneticTSPSolver::solveForPath(const ProblemMap &map, bool *stopFlag)
 {
     TSPGenetics genetics{ map };
-    return genetics.runEvolution();
+    return genetics.runEvolution(stopFlag);
 }

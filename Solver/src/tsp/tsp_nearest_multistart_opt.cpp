@@ -10,7 +10,7 @@
  * This method is multi-threaded and will use the number of threads specified in the constructor.
  */
 [[nodiscard]]
-ProblemPath TspNearestMultistartOptSolver::solveForPath(const ProblemMap &map) {
+ProblemPath TspNearestMultistartOptSolver::solveForPath(const ProblemMap &map, bool *stopFlag) {
     // Variables
     std::vector<std::thread> threads;
     std::mutex mutex;
@@ -26,7 +26,7 @@ ProblemPath TspNearestMultistartOptSolver::solveForPath(const ProblemMap &map) {
     // Run threads
     for (unsigned int i = 0; i < m_nbThread; i++) {
         std::thread thread{[&]() {
-            solveMultiStartThread(map, leftStations, bestPath, bestLength, mutex);
+            solveMultiStartThread(map, leftStations, bestPath, bestLength, mutex, stopFlag);
         }};
         threads.push_back(std::move(thread));
     }
@@ -47,10 +47,10 @@ ProblemPath TspNearestMultistartOptSolver::solveForPath(const ProblemMap &map) {
  * This method is used by the different threads.
  */
 void TspNearestMultistartOptSolver::solveMultiStartThread(const ProblemMap &map, std::vector<const ProblemStation *> &leftStations,
-                                                          ProblemPath &bestPath, nauticmiles_t &bestLength, std::mutex &mutex) const {
+                                                          ProblemPath &bestPath, nauticmiles_t &bestLength, std::mutex &mutex, bool *stopFlag) const {
     const ProblemStation *current_station;
 
-    while (*m_stop == false) {
+    while (stopFlag == nullptr || !*stopFlag) {
         // Get the current station
         mutex.lock();
         if (!leftStations.empty()) {
@@ -84,9 +84,9 @@ void TspNearestMultistartOptSolver::solveMultiStartThread(const ProblemMap &map,
         if (m_optAlgo == 0) {
             // Skip optimization
         } else if (m_optAlgo == 2) {
-            path = tsp_optimization::o2opt(path, map, &distances, m_stop);
+            path = tsp_optimization::o2opt(path, map, &distances, stopFlag);
         } else if (m_optAlgo == 3) {
-            path = tsp_optimization::o3opt(path, map, &distances, m_stop);
+            path = tsp_optimization::o3opt(path, map, &distances, stopFlag);
         }
 
         // Start and end stations are not defined and the path is not a cycle (case 1)

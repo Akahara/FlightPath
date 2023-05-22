@@ -53,6 +53,17 @@ inline nauticmiles_t getLength(const ProblemPath &path) {
 
 class PathSolver {
 public:
-    virtual ProblemPath solveForPath(const ProblemMap &map) = 0;
+    /*
+     * Solves a problem with the given input map as data.
+     * 
+     * More often than not the solver will take an indefinite amount of time,
+     * to avoid stalling infinetely the second parameter can be used to stop
+     * the algorithm, when the flag (is not null and) is set to true the solver
+     * should stop immediately.
+     * It is to the discretion of the implementation to respect the flag or not,
+     * algorithms that end quickly or that cannot be interupted mid-way may choose
+     * to ignore the flag completely.
+     */
+    virtual ProblemPath solveForPath(const ProblemMap &map, bool *stopFlag=nullptr) = 0;
 };
 
