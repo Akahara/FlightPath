@@ -8,14 +8,16 @@ MainWindow::MainWindow(QWidget *parent)
 {
     ui->setupUi(this);
 
-    ui->tableWidget->setContentsMargins(10,10,0,0);
+    //ui->tableWidget->setContentsMargins(10,10,0,0);
 
     // Call the function in the ExcelHelper class to load the contents of the Excel file into the QTableWidget
-    ExcelHelper::loadExcelToTableWidget(ui->tableWidget, "E:/001_FA/001_Tours/Cours/S8/Projet Collectif/interface graphique/Interface_Graphique/aerodromes.xlsx");
+    //ExcelHelper::loadExcelToTableWidget(ui->tableWidget, "E:/001_FA/001_Tours/Cours/S8/Projet Collectif/interface graphique/Interface_Graphique/aerodromes.xlsx");
 
-    ExcelHelper::displayColumnContentsInTableWidget(ui->tableWidget_3, "E:/001_FA/001_Tours/Cours/S8/Projet Collectif/interface graphique/Interface_Graphique/aerodromes.xlsx","VFR nuit");
+    //ExcelHelper::displayColumnContentsInTableWidget(ui->tableWidget_3, "E:/001_FA/001_Tours/Cours/S8/Projet Collectif/interface graphique/Interface_Graphique/aerodromes.xlsx","VFR nuit");
 
-    ExcelHelper::displayColumnContentsInTableWidget(ui->tableWidget_2, "E:/001_FA/001_Tours/Cours/S8/Projet Collectif/interface graphique/Interface_Graphique/aerodromes.xlsx","Essence");
+    //ExcelHelper::displayColumnContentsInTableWidget(ui->tableWidget_2, "E:/001_FA/001_Tours/Cours/S8/Projet Collectif/interface graphique/Interface_Graphique/aerodromes.xlsx","Essence");
+
+
 }
 
 MainWindow::~MainWindow()

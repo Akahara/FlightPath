@@ -1,0 +1,78 @@
+#ifndef STATIONMODEL_H
+#define STATIONMODEL_H
+
+#include "QtCore/qabstractitemmodel.h"
+#include "Solver/src/station.h"
+
+class StationModel : public QAbstractTableModel
+{
+    QList<Station> m_stations;
+    QList<bool> m_excluded;
+public:
+    //StationModel();
+    StationModel(QObject * parent = {}) : QAbstractTableModel{parent} {}
+    int rowCount(const QModelIndex &parent = QModelIndex()) const override { return m_stations.count(); }
+    int columnCount(const QModelIndex &parent = QModelIndex()) const override { return 8; }
+    QVariant data(const QModelIndex &index, int role = Qt::DisplayRole) const override {
+        if (role == Qt::CheckStateRole && index.column() == 0) {
+            // Renvoyer l'état de la case à cocher
+            return m_excluded[index.row()] ? Qt::Checked : Qt::Unchecked;
+        }
+        if (role == Qt::DisplayRole) {
+            switch (index.column()) {
+            //case 0: return m_excluded[index.row()] ? Qt::Checked : Qt::Unchecked;
+            case 1: return QString::fromStdString(m_stations[index.row()].getOACI());
+            case 2: return QString::fromStdString(m_stations[index.row()].getName());
+            case 3: return m_stations[index.row()].getLocation().lat;
+            case 4: return m_stations[index.row()].getLocation().lon;
+            case 5: return QString::fromStdString(m_stations[index.row()].getStatus());
+            case 6: return QString::fromStdString(m_stations[index.row()].getNightVFR());
+            case 7: return QString::fromStdString(m_stations[index.row()].getFuel());
+            default: return {};
+            }
+        }
+        return QVariant();
+    }
+    QVariant headerData(int section, Qt::Orientation orientation, int role = Qt::DisplayRole) const override {
+        if (role == Qt::DisplayRole) {
+            switch (section) {
+            case 0: return "Exclure";
+            case 1: return "code OACI";
+            case 2: return "Nom";
+            case 3: return "Latitude";
+            case 4: return "Longitude";
+            case 5: return "Statut";
+            case 6: return "VFR de nuit";
+            case 7: return "Carburant";
+            default: return {};
+            }
+        }
+        return QVariant();
+    }
+    Qt::ItemFlags flags(const QModelIndex &index) const override {
+        Qt::ItemFlags flags = QAbstractTableModel::flags(index);
+        if (index.column() == 0) {
+            flags |= Qt::ItemIsUserCheckable;
+        }
+        return flags;
+    }
+    bool setData(const QModelIndex &index, const QVariant &value, int role = Qt::EditRole) override {
+        if (role == Qt::CheckStateRole && index.column() == 0 && index.isValid()) {
+            // Mettre à jour la valeur de la case à cocher
+            m_excluded[index.row()] = (value == Qt::Checked);
+            emit dataChanged(index, index, {role});
+            return true;
+        }
+
+        return QAbstractTableModel::setData(index, value, role);
+    }
+    void append(const Station &station) {
+        beginInsertRows({}, m_stations.count(), m_stations.count());
+        m_stations.append(station);
+        m_excluded.append(false);
+        endInsertRows();
+    }
+
+};
+
+#endif // STATIONMODEL_H
