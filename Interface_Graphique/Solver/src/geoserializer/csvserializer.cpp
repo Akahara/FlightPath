@@ -43,41 +43,43 @@ GeoMap CSVSerializer::parseMap(const std::filesystem::path &file) const
     // Create the stations
     for (int i = 0; i < content.size(); i++)
     {
-        if (content[i][EXCLUDE_COLUMN-1].empty())
-        {
-            std::string OACI, name, lat, lon, status, nightVFR, fuel;
+        std::string OACI, name, lat, lon, status, nightVFR, fuel;
 
-            OACI = content[i][OACI_COLUMN - 1];
-            name = content[i][NAME_COLUMN - 1];
-            lat = content[i][LATITUDE_COLUMN - 1];
-            lon = content[i][LONGITUDE_COLUMN - 1];
-            status = content[i][STATUS_COLUMN - 1];
-            nightVFR = content[i][NIGHT_VFR_COLUMN - 1];
-            fuel = content[i][FUEL_COLUMN - 1];
+        OACI = content[i][OACI_COLUMN - 1];
+        name = content[i][NAME_COLUMN - 1];
+        lat = content[i][LATITUDE_COLUMN - 1];
+        lon = content[i][LONGITUDE_COLUMN - 1];
+        status = content[i][STATUS_COLUMN - 1];
+        nightVFR = content[i][NIGHT_VFR_COLUMN - 1];
+        fuel = content[i][FUEL_COLUMN - 1];
 
-            if (fuel.back() == '\r') {
-                fuel.pop_back(); // remove the last character (\r)
-            }
-
-            double lat_value, lon_value;
-
-            try {
-                lat_value = string2coordinate(lat);
-                lon_value = string2coordinate(lon);
-            } catch (std::exception &e) {
-                throw std::runtime_error("Error while parsing the file \""
-                                         + file.string()
-                                         + "\" at row "
-                                         + std::to_string(i + 2)
-                                         + ": " + e.what());
-            }
-
-            Location location{ lon_value, lat_value };
-            Station station (location, name, OACI, status, nightVFR, fuel);
-
-            // Add the station to the map
-            resultat.getStations().emplace_back(station);
+        bool excluded = false;
+        if (!content[i][EXCLUDE_COLUMN-1].empty()) {
+            excluded = true;
         }
+
+        if (fuel.back() == '\r') {
+            fuel.pop_back(); // remove the last character (\r)
+        }
+
+        double lat_value, lon_value;
+
+        try {
+            lat_value = string2coordinate(lat);
+            lon_value = string2coordinate(lon);
+        } catch (std::exception &e) {
+            throw std::runtime_error("Error while parsing the file \""
+                                     + file.string()
+                                     + "\" at row "
+                                     + std::to_string(i + 2)
+                                     + ": " + e.what());
+        }
+
+        Location location{ lon_value, lat_value };
+        Station station (excluded, location, name, OACI, status, nightVFR, fuel);
+
+        // Add the station to the map
+        resultat.getStations().emplace_back(station);
     }
 
     return resultat;

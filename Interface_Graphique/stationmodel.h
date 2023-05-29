@@ -7,16 +7,18 @@
 class StationModel : public QAbstractTableModel
 {
     QList<Station> m_stations;
-    QList<bool> m_excluded;
 public:
     //StationModel();
     StationModel(QObject * parent = {}) : QAbstractTableModel{parent} {}
+
     int rowCount(const QModelIndex &parent = QModelIndex()) const override { return m_stations.count(); }
+
     int columnCount(const QModelIndex &parent = QModelIndex()) const override { return 8; }
+
     QVariant data(const QModelIndex &index, int role = Qt::DisplayRole) const override {
         if (role == Qt::CheckStateRole && index.column() == 0) {
             // Renvoyer l'état de la case à cocher
-            return m_excluded[index.row()] ? Qt::Checked : Qt::Unchecked;
+            return m_stations[index.row()].isExcluded() ? Qt::Checked : Qt::Unchecked;
         }
         if (role == Qt::DisplayRole) {
             switch (index.column()) {
@@ -33,6 +35,7 @@ public:
         }
         return QVariant();
     }
+
     QVariant headerData(int section, Qt::Orientation orientation, int role = Qt::DisplayRole) const override {
         if (role == Qt::DisplayRole) {
             switch (section) {
@@ -49,6 +52,7 @@ public:
         }
         return QVariant();
     }
+
     Qt::ItemFlags flags(const QModelIndex &index) const override {
         Qt::ItemFlags flags = QAbstractTableModel::flags(index);
         if (index.column() == 0) {
@@ -56,20 +60,21 @@ public:
         }
         return flags;
     }
+
     bool setData(const QModelIndex &index, const QVariant &value, int role = Qt::EditRole) override {
         if (role == Qt::CheckStateRole && index.column() == 0 && index.isValid()) {
             // Mettre à jour la valeur de la case à cocher
-            m_excluded[index.row()] = (value == Qt::Checked);
+            m_stations[index.row()].setExcluded(value == Qt::Checked);
             emit dataChanged(index, index, {role});
             return true;
         }
 
         return QAbstractTableModel::setData(index, value, role);
     }
+
     void append(const Station &station) {
         beginInsertRows({}, m_stations.count(), m_stations.count());
         m_stations.append(station);
-        m_excluded.append(false);
         endInsertRows();
     }
 

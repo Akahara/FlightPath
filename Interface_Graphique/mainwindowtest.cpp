@@ -9,11 +9,21 @@ MainWindowTest::MainWindowTest(QWidget *parent) :
 {
     ui->setupUi(this);
 
-    connect(ui->actionOuvrir, SIGNAL(triggered()), this, SLOT(openFileDialog()));
-    connect(ui->actionEnregistrer, SIGNAL(triggered()), this, SLOT(saveFileDialog()));
-
+    // Set up table view
     ui->excelTable->setModel(&m_model);
     ui->excelTable->verticalHeader()->hide();
+
+    // Set max value for spin boxes
+    ui->depH->setMaximum(23);
+    ui->depM->setMaximum(59);
+    ui->levH->setMaximum(23);
+    ui->levM->setMaximum(59);
+    ui->couH->setMaximum(23);
+    ui->couM->setMaximum(59);
+
+    // Connect signals and slots
+    connect(ui->actionOuvrir, SIGNAL(triggered()), this, SLOT(openFileDialog()));
+    connect(ui->actionEnregistrer, SIGNAL(triggered()), this, SLOT(saveFileDialog()));
 }
 
 MainWindowTest::~MainWindowTest()

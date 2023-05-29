@@ -14,10 +14,11 @@ GeoMap XLSSerializer::parseMap(const std::filesystem::path& file) const
 
     for (auto row = 2; row <= worksheet.rowCount(); row++) { // skip the header
         try {
-            // Skip excluded stations
+            // Check if the station is excluded
+            bool excluded = false;
             auto exclude = worksheet.cell(row, EXCLUDE_COLUMN).value().get<std::string>();
             if (exclude == "x" || exclude == "X") {
-                continue;
+                excluded = true;
             }
 
             // Get all the fields
@@ -35,7 +36,7 @@ GeoMap XLSSerializer::parseMap(const std::filesystem::path& file) const
             Location location = Location::fromNECoordinates(string2coordinate(lat), string2coordinate(lon));
 
             // Create a Station
-            Station station(location, name, OACI, status, nightVFR, fuel);
+            Station station(excluded, location, name, OACI, status, nightVFR, fuel);
 
             // Add the station to the map
             map.getStations().push_back(station);
