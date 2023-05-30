@@ -45,8 +45,7 @@ SOURCES += \
     excelhelper.cpp \
     main.cpp \
     mainwindow.cpp \
-    mainwindowtest.cpp \
-    stationmodel.cpp
+    mainwindowtest.cpp
 
 HEADERS += \
     Solver/src/breitling/breitlingSolver.h \
@@ -116,6 +115,7 @@ HEADERS += \
     Solver/vendor/OpenXLSX/headers/XLZipArchive.hpp \
     Solver/vendor/OpenXLSX/sources/utilities/XLUtilities.hpp \
     excelhelper.h \
+    fuelmodel.h \
     mainwindow.h \
     mainwindowtest.h \
     stationmodel.h

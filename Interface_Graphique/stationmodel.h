@@ -20,7 +20,7 @@ public:
             // Renvoyer l'état de la case à cocher
             return m_stations[index.row()].isExcluded() ? Qt::Checked : Qt::Unchecked;
         }
-        if (role == Qt::DisplayRole) {
+        if (role == Qt::DisplayRole || role == Qt::EditRole) {
             switch (index.column()) {
             //case 0: return m_excluded[index.row()] ? Qt::Checked : Qt::Unchecked;
             case 1: return QString::fromStdString(m_stations[index.row()].getOACI());
@@ -57,14 +57,33 @@ public:
         Qt::ItemFlags flags = QAbstractTableModel::flags(index);
         if (index.column() == 0) {
             flags |= Qt::ItemIsUserCheckable;
+        } else if (index.column() == 3 || index.column() == 4) {
+            // Nothing
+        }
+        else {
+            flags |= Qt::ItemIsEditable;
         }
         return flags;
     }
 
     bool setData(const QModelIndex &index, const QVariant &value, int role = Qt::EditRole) override {
+        emit dataChanged(index, index, {role});
         if (role == Qt::CheckStateRole && index.column() == 0 && index.isValid()) {
             // Mettre à jour la valeur de la case à cocher
             m_stations[index.row()].setExcluded(value == Qt::Checked);
+            emit dataChanged(index, index, {role});
+            return true;
+        } else if (role == Qt::EditRole && index.isValid()) {
+            switch (index.column()) {
+            case 1: m_stations[index.row()].setOACI(value.toString().toStdString()); break;
+            case 2: m_stations[index.row()].setName(value.toString().toStdString()); break;
+            case 3: return false;
+            case 4: return false;
+            case 5: m_stations[index.row()].setStatus(value.toString().toStdString()); break;
+            case 6: m_stations[index.row()].setNightVFR(value.toString().toStdString()); break;
+            case 7: m_stations[index.row()].setFuel(value.toString().toStdString()); break;
+            default: return false;
+            }
             emit dataChanged(index, index, {role});
             return true;
         }
@@ -78,6 +97,7 @@ public:
         endInsertRows();
     }
 
+    QList<Station> &getStations() { return m_stations; }
 };
 
 #endif // STATIONMODEL_H

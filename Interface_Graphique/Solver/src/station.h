@@ -36,6 +36,12 @@ public:
     const std::string &getFuel() const { return m_fuel; }
 
     void setExcluded(const bool &excluded) { m_excluded = excluded; }
+    void setLocation(const Location &location) { m_location = location; }
+    void setName(const std::string &name) { m_name = name; }
+    void setOACI(const std::string &OACI) { m_OACI = OACI; }
+    void setStatus(const std::string &status) { m_status = status; }
+    void setNightVFR(const std::string &nightVFR) { m_nightVFR = nightVFR; }
+    void setFuel(const std::string &fuel) { m_fuel = fuel; }
 
     bool operator==(const Station &other) const { return m_location == other.m_location; }
     bool operator!=(const Station &other) const { return m_location != other.m_location; }
