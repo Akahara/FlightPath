@@ -3,6 +3,8 @@
 
 #include "QtCore/qabstractitemmodel.h"
 
+#include "Solver/src/station.h"
+
 class NightFlightModel : public QAbstractTableModel
 {
     QMap<std::string, bool> m_statuses;
@@ -65,6 +67,10 @@ public:
         beginResetModel();
         m_statuses = statuses;
         endResetModel();
+    }
+
+    bool isAccessibleAtNight(const Station &station) {
+        return m_statuses[station.getFuel()];
     }
 
     QMap<std::string, bool> &getStatuses() { return m_statuses; }

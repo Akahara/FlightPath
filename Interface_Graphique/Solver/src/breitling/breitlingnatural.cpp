@@ -165,7 +165,7 @@ ProblemPath NaturalBreitlingSolver::solveForPath(const ProblemMap &map, bool *st
 
     if (nearest == nullptr) {
       if (pathStations.size() <= 1)
-        throw std::runtime_error("No possible path with given inputs"); // exhausted all possible paths
+        break; // exhausted all possible paths
 
       // backtrack by one station
       state.closedStations[pathStations.size()-1].push_back(pathStations.back());

@@ -56,7 +56,7 @@ bool satisfiesPathConstraints(const ProblemMap &map, const BreitlingData &datase
 {
     return path.size() > 0
       && path[0] == map[dataset.departureStation] 
-      && (dataset.targetStation == BreitlingData::NO_TARGET_STATION
+      && (dataset.targetStation == BreitlingData::NO_SPECIFIED_STATION
           || path[path.size() - 1] == map[dataset.targetStation]);
 }
 

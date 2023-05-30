@@ -7,7 +7,7 @@
     <x>0</x>
     <y>0</y>
     <width>1094</width>
-    <height>882</height>
+    <height>752</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -156,6 +156,9 @@
                <property name="maximum">
                 <number>23</number>
                </property>
+               <property name="value">
+                <number>20</number>
+               </property>
               </widget>
              </item>
              <item>
@@ -219,6 +222,9 @@
                <property name="maximum">
                 <number>23</number>
                </property>
+               <property name="value">
+                <number>8</number>
+               </property>
               </widget>
              </item>
              <item>
@@ -281,6 +287,9 @@
                </property>
                <property name="maximum">
                 <number>23</number>
+               </property>
+               <property name="value">
+                <number>8</number>
                </property>
               </widget>
              </item>
@@ -564,88 +573,90 @@
               </widget>
              </item>
              <item>
-              <layout class="QGridLayout" name="gridLayout">
-               <item row="0" column="1">
-                <widget class="QLabel" name="depOACILabel">
-                 <property name="maximumSize">
-                  <size>
-                   <width>100</width>
-                   <height>16777215</height>
-                  </size>
-                 </property>
-                 <property name="text">
-                  <string>----</string>
-                 </property>
-                </widget>
-               </item>
-               <item row="2" column="0" alignment="Qt::AlignRight">
-                <widget class="QLabel" name="label_15">
-                 <property name="text">
-                  <string>VFR nuit</string>
-                 </property>
-                </widget>
-               </item>
-               <item row="1" column="0" alignment="Qt::AlignRight">
-                <widget class="QLabel" name="label_13">
-                 <property name="text">
-                  <string>Statut</string>
-                 </property>
-                </widget>
-               </item>
-               <item row="1" column="1">
-                <widget class="QLabel" name="depStatutLabel">
-                 <property name="maximumSize">
-                  <size>
-                   <width>100</width>
-                   <height>16777215</height>
-                  </size>
-                 </property>
-                 <property name="text">
-                  <string>----</string>
-                 </property>
-                </widget>
-               </item>
-               <item row="0" column="0" alignment="Qt::AlignRight">
-                <widget class="QLabel" name="label_11">
-                 <property name="text">
-                  <string>Code OACI</string>
-                 </property>
-                </widget>
-               </item>
-               <item row="2" column="1">
-                <widget class="QLabel" name="depVFRLabel">
-                 <property name="maximumSize">
-                  <size>
-                   <width>100</width>
-                   <height>16777215</height>
-                  </size>
-                 </property>
-                 <property name="text">
-                  <string>----</string>
-                 </property>
-                </widget>
-               </item>
-               <item row="3" column="0" alignment="Qt::AlignRight">
-                <widget class="QLabel" name="label_17">
-                 <property name="text">
-                  <string>Essence</string>
-                 </property>
-                </widget>
-               </item>
-               <item row="3" column="1">
-                <widget class="QLabel" name="depEssenceLabel">
-                 <property name="maximumSize">
-                  <size>
-                   <width>100</width>
-                   <height>16777215</height>
-                  </size>
-                 </property>
-                 <property name="text">
-                  <string>----</string>
-                 </property>
-                </widget>
-               </item>
-              </layout>
+              <widget class="QWidget" name="" native="true">
+               <layout class="QGridLayout" name="gridLayout">
+                <item row="0" column="1">
+                 <widget class="QLabel" name="depOACILabel">
+                  <property name="maximumSize">
+                   <size>
+                    <width>100</width>
+                    <height>16777215</height>
+                   </size>
+                  </property>
+                  <property name="text">
+                   <string>----</string>
+                  </property>
+                 </widget>
+                </item>
+                <item row="2" column="0" alignment="Qt::AlignRight">
+                 <widget class="QLabel" name="label_15">
+                  <property name="text">
+                   <string>VFR nuit</string>
+                  </property>
+                 </widget>
+                </item>
+                <item row="1" column="0" alignment="Qt::AlignRight">
+                 <widget class="QLabel" name="label_13">
+                  <property name="text">
+                   <string>Statut</string>
+                  </property>
+                 </widget>
+                </item>
+                <item row="1" column="1">
+                 <widget class="QLabel" name="depStatutLabel">
+                  <property name="maximumSize">
+                   <size>
+                    <width>100</width>
+                    <height>16777215</height>
+                   </size>
+                  </property>
+                  <property name="text">
+                   <string>----</string>
+                  </property>
+                 </widget>
+                </item>
+                <item row="0" column="0" alignment="Qt::AlignRight">
+                 <widget class="QLabel" name="label_11">
+                  <property name="text">
+                   <string>Code OACI</string>
+                  </property>
+                 </widget>
+                </item>
+                <item row="2" column="1">
+                 <widget class="QLabel" name="depVFRLabel">
+                  <property name="maximumSize">
+                   <size>
+                    <width>100</width>
+                    <height>16777215</height>
+                   </size>
+                  </property>
+                  <property name="text">
+                   <string>----</string>
+                  </property>
+                 </widget>
+                </item>
+                <item row="3" column="0" alignment="Qt::AlignRight">
+                 <widget class="QLabel" name="label_17">
+                  <property name="text">
+                   <string>Essence</string>
+                  </property>
+                 </widget>
+                </item>
+                <item row="3" column="1">
+                 <widget class="QLabel" name="depEssenceLabel">
+                  <property name="maximumSize">
+                   <size>
+                    <width>100</width>
+                    <height>16777215</height>
+                   </size>
+                  </property>
+                  <property name="text">
+                   <string>----</string>
+                  </property>
+                 </widget>
+                </item>
+               </layout>
+              </widget>
              </item>
             </layout>
            </widget>
@@ -692,88 +703,90 @@
               </widget>
              </item>
              <item>
-              <layout class="QGridLayout" name="gridLayout_2">
-               <item row="2" column="1">
-                <widget class="QLabel" name="arrVFRLabel">
-                 <property name="maximumSize">
-                  <size>
-                   <width>100</width>
-                   <height>16777215</height>
-                  </size>
-                 </property>
-                 <property name="text">
-                  <string>----</string>
-                 </property>
-                </widget>
-               </item>
-               <item row="1" column="1">
-                <widget class="QLabel" name="arrStatutLabel">
-                 <property name="maximumSize">
-                  <size>
-                   <width>100</width>
-                   <height>16777215</height>
-                  </size>
-                 </property>
-                 <property name="text">
-                  <string>----</string>
-                 </property>
-                </widget>
-               </item>
-               <item row="1" column="0" alignment="Qt::AlignRight">
-                <widget class="QLabel" name="label_21">
-                 <property name="text">
-                  <string>Statut</string>
-                 </property>
-                </widget>
-               </item>
-               <item row="2" column="0" alignment="Qt::AlignRight">
-                <widget class="QLabel" name="label_23">
-                 <property name="text">
-                  <string>VFR nuit</string>
-                 </property>
-                </widget>
-               </item>
-               <item row="0" column="0" alignment="Qt::AlignRight">
-                <widget class="QLabel" name="label_19">
-                 <property name="text">
-                  <string>Code OACI</string>
-                 </property>
-                </widget>
-               </item>
-               <item row="0" column="1">
-                <widget class="QLabel" name="arrOACILabel">
-                 <property name="maximumSize">
-                  <size>
-                   <width>100</width>
-                   <height>16777215</height>
-                  </size>
-                 </property>
-                 <property name="text">
-                  <string>----</string>
-                 </property>
-                </widget>
-               </item>
-               <item row="3" column="0" alignment="Qt::AlignRight">
-                <widget class="QLabel" name="label_25">
-                 <property name="text">
-                  <string>Essence</string>
-                 </property>
-                </widget>
-               </item>
-               <item row="3" column="1">
-                <widget class="QLabel" name="arrEssenceLabel">
-                 <property name="maximumSize">
-                  <size>
-                   <width>100</width>
-                   <height>16777215</height>
-                  </size>
-                 </property>
-                 <property name="text">
-                  <string>----</string>
-                 </property>
-                </widget>
-               </item>
-              </layout>
+              <widget class="QWidget" name="" native="true">
+               <layout class="QGridLayout" name="gridLayout_2">
+                <item row="2" column="1">
+                 <widget class="QLabel" name="arrVFRLabel">
+                  <property name="maximumSize">
+                   <size>
+                    <width>100</width>
+                    <height>16777215</height>
+                   </size>
+                  </property>
+                  <property name="text">
+                   <string>----</string>
+                  </property>
+                 </widget>
+                </item>
+                <item row="1" column="1">
+                 <widget class="QLabel" name="arrStatutLabel">
+                  <property name="maximumSize">
+                   <size>
+                    <width>100</width>
+                    <height>16777215</height>
+                   </size>
+                  </property>
+                  <property name="text">
+                   <string>----</string>
+                  </property>
+                 </widget>
+                </item>
+                <item row="1" column="0" alignment="Qt::AlignRight">
+                 <widget class="QLabel" name="label_21">
+                  <property name="text">
+                   <string>Statut</string>
+                  </property>
+                 </widget>
+                </item>
+                <item row="2" column="0" alignment="Qt::AlignRight">
+                 <widget class="QLabel" name="label_23">
+                  <property name="text">
+                   <string>VFR nuit</string>
+                  </property>
+                 </widget>
+                </item>
+                <item row="0" column="0" alignment="Qt::AlignRight">
+                 <widget class="QLabel" name="label_19">
+                  <property name="text">
+                   <string>Code OACI</string>
+                  </property>
+                 </widget>
+                </item>
+                <item row="0" column="1">
+                 <widget class="QLabel" name="arrOACILabel">
+                  <property name="maximumSize">
+                   <size>
+                    <width>100</width>
+                    <height>16777215</height>
+                   </size>
+                  </property>
+                  <property name="text">
+                   <string>----</string>
+                  </property>
+                 </widget>
+                </item>
+                <item row="3" column="0" alignment="Qt::AlignRight">
+                 <widget class="QLabel" name="label_25">
+                  <property name="text">
+                   <string>Essence</string>
+                  </property>
+                 </widget>
+                </item>
+                <item row="3" column="1">
+                 <widget class="QLabel" name="arrEssenceLabel">
+                  <property name="maximumSize">
+                   <size>
+                    <width>100</width>
+                    <height>16777215</height>
+                   </size>
+                  </property>
+                  <property name="text">
+                   <string>----</string>
+                  </property>
+                 </widget>
+                </item>
+               </layout>
+              </widget>
              </item>
             </layout>
            </widget>
@@ -811,10 +824,24 @@
            </widget>
           </item>
           <item row="1" column="1">
-           <widget class="QDoubleSpinBox" name="capacite"/>
+           <widget class="QDoubleSpinBox" name="capacite">
+            <property name="maximum">
+             <double>10000.000000000000000</double>
+            </property>
+            <property name="value">
+             <double>190.000000000000000</double>
+            </property>
+           </widget>
           </item>
           <item row="0" column="1">
-           <widget class="QDoubleSpinBox" name="vitesse"/>
+           <widget class="QDoubleSpinBox" name="vitesse">
+            <property name="maximum">
+             <double>2000.000000000000000</double>
+            </property>
+            <property name="value">
+             <double>120.000000000000000</double>
+            </property>
+           </widget>
           </item>
           <item row="1" column="0">
            <widget class="QLabel" name="label_28">
@@ -845,7 +872,14 @@
            </widget>
           </item>
           <item row="2" column="1">
-           <widget class="QDoubleSpinBox" name="consommation"/>
+           <widget class="QDoubleSpinBox" name="consommation">
+            <property name="maximum">
+             <double>200.000000000000000</double>
+            </property>
+            <property name="value">
+             <double>38.000000000000000</double>
+            </property>
+           </widget>
           </item>
          </layout>
         </widget>

@@ -1,9 +1,15 @@
 #include "mainwindowtest.h"
 #include "ui_mainwindowtest.h"
 
-#include <QFileDialog>
 #include <algorithm>
 #include <thread>
+#include <memory>
+#include <QFileDialog>
+
+#include "Solver/src/pathsolver.h"
+#include "Solver/src/tsp/tsp_nearest_multistart_opt.h"
+#include "Solver/src/breitling/breitlingnatural.h"
+#include "Solver/src/breitling/label_setting_breitling.h"
 
 MainWindowTest::MainWindowTest(QWidget *parent) :
     QMainWindow(parent),
@@ -38,7 +44,8 @@ MainWindowTest::MainWindowTest(QWidget *parent) :
     connect(ui->algoCombobox, SIGNAL(activated(int)), this, SLOT(clickOnAlgoComboBox(int)));
     connect(ui->depComboBox, SIGNAL(activated(int)), this, SLOT(updateDepArrInfos()));
     connect(ui->arrComboBox, SIGNAL(activated(int)), this, SLOT(updateDepArrInfos()));
-    connect(ui->excelTable->model(), SIGNAL(dataChanged(QModelIndex,QModelIndex)), this, SLOT(excelTableViewChanged()));
+    connect(ui->excelTable->model(), SIGNAL(dataChanged(QModelIndex, QModelIndex)), this, SLOT(excelTableViewChanged()));
+    connect(ui->computeButton, SIGNAL(clicked(bool)), this, SLOT(runSolver()));
 }
 
 MainWindowTest::~MainWindowTest()
@@ -56,7 +63,6 @@ void MainWindowTest::openFileDialog()
 
     this->filePath = fileName;
     updateGeoMapFromFile();
-    updateExcelTableFromGeoMap();
     updateComboBoxDepArr();
     updateDepArrInfos();
     updateFilterViews();
@@ -66,6 +72,10 @@ void MainWindowTest::saveFileDialog()
 {
   if (filePath.isEmpty())
       return;
+
+  GeoMap geoMap;
+  geoMap.setStations(std::vector<Station>(m_excelModel.getStations().begin(), m_excelModel.getStations().end()));
+
   if (filePath.endsWith(".xls") || filePath.endsWith(".xlsx")) {
       XLSSerializer serializer;
       serializer.writeMap(geoMap, filePath.toStdString());
@@ -77,21 +87,27 @@ void MainWindowTest::saveFileDialog()
 
 void MainWindowTest::updateGeoMapFromFile()
 {
-    if (filePath.isEmpty()) {
+    if (filePath.isEmpty())
         return;
-    } else if (filePath.endsWith(".xls") || filePath.endsWith(".xlsx")) {
+
+    GeoMap geoMap;
+
+    if (filePath.endsWith(".xls") || filePath.endsWith(".xlsx")) {
         XLSSerializer serializer;
         geoMap = serializer.parseMap(filePath.toStdString());
     } else if (filePath.endsWith(".csv")) {
         CSVSerializer serializer;
         geoMap = serializer.parseMap(filePath.toStdString());
+    } else {
+      // unreachable
+      assert(false);
     }
-}
 
-void MainWindowTest::updateExcelTableFromGeoMap() {
-    for (const Station &station : geoMap.getStations()) {
-        m_excelModel.append(station);
-    }
+    QList<Station> stations;
+    stations.reserve(geoMap.getStations().size());
+    for(const Station &s : geoMap.getStations())
+      stations.append(s);
+    m_excelModel.setStations(stations);
 }
 
 void MainWindowTest::clickOnBoucle(int checkState) {
@@ -105,7 +121,6 @@ void MainWindowTest::clickOnAlgoComboBox(int index) {
     ui->threadWidget->setVisible(index == TSP_INDEX);
     if(index == BREITLING_INDEX)
         ui->arriveeBoxWidget->setEnabled(true);
-
     checkDepArrBoucleValidity();
 }
 
@@ -210,5 +225,57 @@ void MainWindowTest::excelTableViewChanged() {
     updateComboBoxDepArr();
     updateFilterViews();
     updateDepArrInfos();
+}
+
+static inline daytime_t controlsToDaytime(const QSpinBox *hoursSpinbox, const QSpinBox *minutesSpinBox) {
+    return
+        (hoursSpinbox==nullptr ? 0 : hoursSpinbox->value()) +
+        (minutesSpinBox==nullptr ? 0 : minutesSpinBox->value()/60.f);
+}
+
+void MainWindowTest::runSolver() {
+  std::thread runnerThread{[this]() {
+      std::unique_ptr<PathSolver> solver;
+      ProblemMap problemMap;
+
+
+      for(const Station &station : m_excelModel.getStations()) {
+          if(station.isExcluded() || m_statusModel.isExcluded(station))
+              continue;
+          bool isAccessibleAtNight = m_nightFlightModel.isAccessibleAtNight(station);
+          bool canBeUsedToFuel = m_fuelModel.canBeUsedToFuel(station);
+          problemMap.emplace_back(&station, isAccessibleAtNight, canBeUsedToFuel);
+      }
+
+      size_t departureStation = ui->depComboBox->currentIndex()-1; // will be -1 if no departure station is selected
+      size_t targetStation = ui->arrComboBox->currentIndex()-1; // will be -1 if no target station is selected
+
+      // generate the solver instance
+      if(ui->algoCombobox->currentIndex() == TSP_INDEX) {
+          unsigned int nbThread = 2;
+          unsigned int optAlgo = 1;
+          bool loop = ui->boucle->checkState() == Qt::Checked;
+          const ProblemStation *startStation = departureStation == -1 ? nullptr : &problemMap[departureStation];
+          const ProblemStation *endStation = targetStation == -1 ? nullptr : &problemMap[targetStation];
+          solver = std::make_unique<TspNearestMultistartOptSolver>(nbThread, optAlgo, loop, startStation, endStation);
+      } else {
+          BreitlingData dataset;
+          dataset.departureTime = controlsToDaytime(ui->depH, ui->depM);
+          dataset.nauticalDaytime = controlsToDaytime(ui->couH, ui->couM);
+          dataset.nauticalNighttime = controlsToDaytime(ui->levH, ui->levM);
+          dataset.planeFuelCapacity = ui->capacite->value();
+          dataset.planeFuelUsage = ui->consommation->value();
+          dataset.planeSpeed = ui->vitesse->value();
+          dataset.timeToRefuel = controlsToDaytime(nullptr, ui->tmpRav);
+          dataset.departureStation = departureStation;
+          dataset.targetStation = targetStation;
+          solver = std::make_unique<NaturalBreitlingSolver>(dataset);
+      }
+
+      static bool stopFlag = false;
+      solver->solveForPath(problemMap, &stopFlag);
+  }};
+
+  runnerThread.detach();
 }
 

@@ -96,6 +96,12 @@ public:
         endInsertRows();
     }
 
+    void setStations(const QList<Station> &stations) {
+        beginResetModel();
+        m_stations = stations;
+        endResetModel();
+    }
+
     QList<Station> &getStations() { return m_stations; }
 };
 

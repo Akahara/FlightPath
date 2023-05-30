@@ -8,7 +8,7 @@ typedef float daytime_t;
 
 // All daytime fields in this struct should be in the 0..24 range
 struct BreitlingData {
-    static constexpr size_t NO_TARGET_STATION = -1; // value of targetStation if none is required
+    static constexpr size_t NO_SPECIFIED_STATION = -1; // value of targetStation if none is required
 
     nauticmiles_t planeSpeed;    // nautic miles per hour
     daytime_t nauticalDaytime;   // sunrise time (<nauticalNighttime)

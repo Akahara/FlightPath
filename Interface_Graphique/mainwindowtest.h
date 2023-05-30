@@ -30,7 +30,6 @@ private:
     Ui::MainWindowTest *ui;
 
     QString filePath;
-    GeoMap geoMap;
     StationModel m_excelModel;
     FuelModel m_fuelModel;
     StationStatusModel m_statusModel;
@@ -43,7 +42,6 @@ public slots:
     void openFileDialog();
     void saveFileDialog();
     void updateGeoMapFromFile();
-    void updateExcelTableFromGeoMap();
     void clickOnBoucle(int checkState);
     void clickOnAlgoComboBox(int index);
     void updateComboBoxDepArr();
@@ -51,6 +49,7 @@ public slots:
     void checkDepArrBoucleValidity();
     void updateFilterViews();
     void excelTableViewChanged();
+    void runSolver();
 };
 
 #endif // MAINWINDOWTEST_H

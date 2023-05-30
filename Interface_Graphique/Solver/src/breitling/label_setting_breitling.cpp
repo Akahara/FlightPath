@@ -899,7 +899,7 @@ private:
 
   inline void explore(const Label &source, std::vector<Label> &explorationLabels)
   {
-    if (source.visitedStationCount == breitling_constraints::MINIMUM_STATION_COUNT - 1 && m_dataset->targetStation != BreitlingData::NO_TARGET_STATION) {
+    if (source.visitedStationCount == breitling_constraints::MINIMUM_STATION_COUNT - 1 && m_dataset->targetStation != BreitlingData::NO_SPECIFIED_STATION) {
       // only 1 station left, only try to reach the target station
       stationidx_t nextStationIdx = m_dataset->targetStation;
       disttime_t distanceToNext = m_adjencyMatrix.distanceToTargetStation(source.currentStation);
@@ -973,7 +973,7 @@ public:
       Label initialLabel{};
       initialLabel.currentFuel = utils::getPlaneAutonomy(*m_dataset);
       initialLabel.currentTime = m_dataset->departureTime;
-      initialLabel.currentStation = m_dataset->departureStation;
+      initialLabel.currentStation = m_dataset->departureStation == BreitlingData::NO_SPECIFIED_STATION ? (rand() % m_geomap->size()) : m_dataset->departureStation;
       initialLabel.visitedStations.setSet(initialLabel.currentStation);
       initialLabel.visitedRegions = m_stationRegions[initialLabel.currentStation];
       initialLabel.visitedStationCount = 1;
@@ -1094,9 +1094,6 @@ public:
 
 ProblemPath LabelSettingBreitlingSolver::solveForPath(const ProblemMap &map, bool *stopFlag)
 {
-  // prepare the dataset & geomap, that means having the departure 
-  // station at index 0 in the geomap, the target station at index N-1
-  //m_dataset.targetStation = BreitlingData::NO_TARGET_STATION;
   LabelSetting labelSetting{ &map, &m_dataset };
   return labelSetting.labelSetting(stopFlag);
 }

@@ -3,6 +3,8 @@
 
 #include "QtCore/qabstractitemmodel.h"
 
+#include "Solver/src/station.h"
+
 class FuelModel : public QAbstractTableModel
 {
     QMap<std::string, bool> m_fuels;
@@ -68,6 +70,10 @@ public:
         beginResetModel();
         m_fuels = fuels;
         endResetModel();
+    }
+
+    bool canBeUsedToFuel(const Station &station) {
+        return m_fuels[station.getNightVFR()];
     }
 
     QMap<std::string, bool> &getFuels() { return m_fuels; }
