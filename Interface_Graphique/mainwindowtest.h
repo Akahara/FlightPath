@@ -8,6 +8,8 @@
 #include "Solver/src/geoserializer/csvserializer.h"
 #include "fuelmodel.h"
 #include "stationmodel.h"
+#include "nightflightmodel.h"
+#include "statusmodel.h"
 
 #define TSP_INDEX 0
 #define BREITLING_INDEX 1
@@ -31,7 +33,11 @@ private:
     GeoMap geoMap;
     StationModel m_excelModel;
     FuelModel m_fuelModel;
-    std::map<std::string, bool> fuelMap;
+    StationStatusModel m_statusModel;
+    NightFlightModel m_nightFlightModel;
+
+    template<typename AttributeGetter>
+    void repopulateFilterMap(QMap<std::string, bool> &filterMap, AttributeGetter getter);
 
 public slots:
     void openFileDialog();
@@ -43,7 +49,7 @@ public slots:
     void updateComboBoxDepArr();
     void updateDepArrInfos();
     void checkDepArrBoucleValidity();
-    void updateEssenceView();
+    void updateFilterViews();
     void excelTableViewChanged();
 };
 

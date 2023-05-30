@@ -8,7 +8,6 @@ class StationModel : public QAbstractTableModel
 {
     QList<Station> m_stations;
 public:
-    //StationModel();
     StationModel(QObject * parent = {}) : QAbstractTableModel{parent} {}
 
     int rowCount(const QModelIndex &parent = QModelIndex()) const override { return m_stations.count(); }
@@ -20,8 +19,8 @@ public:
             // Renvoyer l'état de la case à cocher
             return m_stations[index.row()].isExcluded() ? Qt::Checked : Qt::Unchecked;
         }
-        if (role == Qt::DisplayRole || role == Qt::EditRole) {
-            switch (index.column()) {
+        if(role == Qt::DisplayRole || role == Qt::EditRole) {
+          switch (index.column()) {
             //case 0: return m_excluded[index.row()] ? Qt::Checked : Qt::Unchecked;
             case 1: return QString::fromStdString(m_stations[index.row()].getOACI());
             case 2: return QString::fromStdString(m_stations[index.row()].getName());
@@ -31,7 +30,7 @@ public:
             case 6: return QString::fromStdString(m_stations[index.row()].getNightVFR());
             case 7: return QString::fromStdString(m_stations[index.row()].getFuel());
             default: return {};
-            }
+          }
         }
         return QVariant();
     }

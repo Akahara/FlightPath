@@ -37,7 +37,7 @@ public:
      */
     virtual void writePath(const std::filesystem::path &file, const Path &path) const = 0;
 
-    // TODO : Add a method for writing a GeoMap object to a file (Map sheet)
+    virtual void writeMap(const GeoMap &map, const std::filesystem::path &file) const {} // TODO implement writeMap in both serializers
 
 protected:
 

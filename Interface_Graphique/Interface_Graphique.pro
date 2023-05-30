@@ -118,7 +118,9 @@ HEADERS += \
     fuelmodel.h \
     mainwindow.h \
     mainwindowtest.h \
-    stationmodel.h
+    nightflightmodel.h \
+    stationmodel.h \
+    statusmodel.h
 
 FORMS += \
     mainwindow.ui \

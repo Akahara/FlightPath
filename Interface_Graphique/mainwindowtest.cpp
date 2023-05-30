@@ -2,6 +2,7 @@
 #include "ui_mainwindowtest.h"
 
 #include <QFileDialog>
+#include <algorithm>
 
 MainWindowTest::MainWindowTest(QWidget *parent) :
     QMainWindow(parent),
@@ -16,19 +17,13 @@ MainWindowTest::MainWindowTest(QWidget *parent) :
     ui->excelTable->setModel(&m_excelModel);
     ui->excelTable->verticalHeader()->hide();
 
-    // Set up fuel table view
+    // Set up filter tables views
     ui->essenceViewTable->setModel(&m_fuelModel);
-    ui->essenceViewTable->verticalHeader()->hide();
     ui->essenceViewTable->horizontalHeader()->setSectionResizeMode(QHeaderView::ResizeToContents);
-
-    // Set max value for spin boxes
-    ui->depH->setMaximum(23);
-    ui->depM->setMaximum(59);
-    ui->levH->setMaximum(23);
-    ui->levM->setMaximum(59);
-    ui->couH->setMaximum(23);
-    ui->couM->setMaximum(59);
-    ui->tmpRav->setMaximum(999);
+    ui->StatutViewTable->setModel(&m_statusModel);
+    ui->StatutViewTable->horizontalHeader()->setSectionResizeMode(QHeaderView::ResizeToContents);
+    ui->VFRViewTable->setModel(&m_nightFlightModel);
+    ui->VFRViewTable->horizontalHeader()->setSectionResizeMode(QHeaderView::ResizeToContents);
 
     // Connect signals and slots
     connect(ui->actionOuvrir, SIGNAL(triggered()), this, SLOT(openFileDialog()));
@@ -37,7 +32,7 @@ MainWindowTest::MainWindowTest(QWidget *parent) :
     connect(ui->algoCombobox, SIGNAL(activated(int)), this, SLOT(clickOnAlgoComboBox(int)));
     connect(ui->depComboBox, SIGNAL(activated(int)), this, SLOT(updateDepArrInfos()));
     connect(ui->arrComboBox, SIGNAL(activated(int)), this, SLOT(updateDepArrInfos()));
-    connect(ui->excelTable->model(), SIGNAL(dataChanged(const QModelIndex&, const QModelIndex&)), this, SLOT(excelTableViewChanged()));
+    connect(ui->excelTable->model(), SIGNAL(dataChanged(QModelIndex, QModelIndex)), this, SLOT(excelTableViewChanged()));
 }
 
 MainWindowTest::~MainWindowTest()
@@ -50,20 +45,28 @@ void MainWindowTest::openFileDialog()
 {
     QString fileName = QFileDialog::getOpenFileName(this, tr("Open File"), QString(),
                                                     tr("(*.xls *.xlsx *.csv)"));
-    if (!fileName.isEmpty()) {
-        this->filePath = fileName;
-    }
+    if (fileName.isEmpty())
+        return;
 
+    this->filePath = fileName;
     updateGeoMapFromFile();
     updateExcelTableFromGeoMap();
     updateComboBoxDepArr();
     updateDepArrInfos();
-    updateEssenceView();
+    updateFilterViews();
 }
 
 void MainWindowTest::saveFileDialog()
 {
-    // TODO
+  if (filePath.isEmpty())
+      return;
+  if (filePath.endsWith(".xls") || filePath.endsWith(".xlsx")) {
+      XLSSerializer serializer;
+      serializer.writeMap(geoMap, filePath.toStdString());
+  } else if (filePath.endsWith(".csv")) {
+      CSVSerializer serializer;
+      serializer.writeMap(geoMap, filePath.toStdString());
+  }
 }
 
 void MainWindowTest::updateGeoMapFromFile()
@@ -90,11 +93,10 @@ void MainWindowTest::clickOnBoucle(int checkState) {
 }
 
 void MainWindowTest::clickOnAlgoComboBox(int index) {
-    if (index == TSP_INDEX) {
-        ui->heures->setVisible(false);
-    } else if (index == BREITLING_INDEX) {
-        ui->heures->setVisible(true);
-    }
+    ui->heures->setVisible(index != TSP_INDEX);
+    ui->boucle->setVisible(index == TSP_INDEX);
+    if(index == BREITLING_INDEX)
+        ui->arriveeBoxWidget->setEnabled(true);
 }
 
 void MainWindowTest::updateComboBoxDepArr() {
@@ -156,50 +158,47 @@ void MainWindowTest::updateDepArrInfos() {
 
 void MainWindowTest::checkDepArrBoucleValidity() {
     if (ui->algoCombobox->currentIndex() == TSP_INDEX) {
-        if (ui->depComboBox->currentText() == "<aucun>") {
+        if (ui->depComboBox->currentText() == "<aucun>" || ui->boucle->checkState() == Qt::Checked)
             ui->arriveeBoxWidget->setEnabled(false);
-        }
-        else if (ui->boucle->checkState() == Qt::Checked) {
-            ui->arriveeBoxWidget->setEnabled(false);
-        }
-        else {
+        else
             ui->arriveeBoxWidget->setEnabled(true);
-        }
     }
 }
 
-void MainWindowTest::updateEssenceView() {
-    QMap<std::string, bool> fuelPresenceMap;
+template<typename AttributeGetter>
+void MainWindowTest::repopulateFilterMap(QMap<std::string, bool> &filterMap, AttributeGetter getter) {
+    // remove entries which are no longer used
+    filterMap.removeIf([this,&getter](const std::pair<std::string,bool> &p) {
+      return std::find_if(m_excelModel.getStations().begin(), m_excelModel.getStations().end(),
+            [&p,&getter](const Station &s) { return getter(s) == p.first; }) == m_excelModel.getStations().end();
+    });
+
+    // add entries for new values (default to true, ie. do not remove when filtering)
+    for (const Station &s : m_excelModel.getStations()) {
+        if(!filterMap.contains(getter(s)))
+            filterMap[getter(s)] = true;
+    }
+}
+
+void MainWindowTest::updateFilterViews() {
     QMap<std::string, bool> fuelMap = m_fuelModel.getFuels();
-    
-    // Fill with fuels from the map
-    for (const Station &station : m_excelModel.getStations()) {
-        fuelPresenceMap[station.getFuel()] = false;
-    }
+    QMap<std::string, bool> statusMap = m_statusModel.getStatuses();
+    QMap<std::string, bool> nightFlightMap = m_nightFlightModel.getStatuses();
 
-    // For all keys in the fuelPresenceMap
-    for (const std::string &key : fuelPresenceMap.keys()) {
-        // If not in the fuelMap, add it
-        if (fuelMap.find(key) == fuelMap.end()) {
-            fuelMap[key] = true;
-        }
-    }
+    // delete unused entries and add new entries for new statuses
+    repopulateFilterMap(fuelMap, [](const Station &s) { return s.getFuel(); });
+    repopulateFilterMap(statusMap, [](const Station &s) { return s.getStatus(); });
+    repopulateFilterMap(nightFlightMap, [](const Station &s) { return s.getNightVFR(); });
 
-    // For all keys in the fuelMap
-    for (const std::string &key : fuelMap.keys()) {
-        // If not in the fuelPresenceMap, remove it
-        if (fuelPresenceMap.find(key) == fuelPresenceMap.end()) {
-            fuelMap.remove(key);
-        }
-    }
-
-    // Update the model
+    // Update the models
     m_fuelModel.setFuels(fuelMap);
+    m_statusModel.setStatuses(statusMap);
+    m_nightFlightModel.setStatuses(nightFlightMap);
 }
 
 void MainWindowTest::excelTableViewChanged() {
     updateComboBoxDepArr();
-    updateEssenceView();
+    updateFilterViews();
     updateDepArrInfos();
 }
 

@@ -18,5 +18,5 @@ out/
 *.kml
 *.odt
 screens/
-build-Interface_Graphique-Qt_6_5_1_for_macOS-Debug/
-build-Interface_Graphique-Qt_6_5_1_for_macOS-Release/
+build*
+**.user*
