@@ -3,12 +3,16 @@
 
 #include <QFileDialog>
 #include <algorithm>
+#include <thread>
 
 MainWindowTest::MainWindowTest(QWidget *parent) :
     QMainWindow(parent),
     ui(new Ui::MainWindowTest)
 {
     ui->setupUi(this);
+
+    // Set LabelNbThreads with max hardware threads
+    ui->labelNbThreads->setText("(Le maximum semble être " + QString::number(std::thread::hardware_concurrency()) + " sur cette machine)");
 
     // Hide "heures widget" by default
     ui->heures->setVisible(false);
@@ -25,6 +29,8 @@ MainWindowTest::MainWindowTest(QWidget *parent) :
     ui->VFRViewTable->setModel(&m_nightFlightModel);
     ui->VFRViewTable->horizontalHeader()->setSectionResizeMode(QHeaderView::ResizeToContents);
 
+
+
     // Connect signals and slots
     connect(ui->actionOuvrir, SIGNAL(triggered()), this, SLOT(openFileDialog()));
     connect(ui->actionEnregistrer, SIGNAL(triggered()), this, SLOT(saveFileDialog()));
@@ -32,7 +38,7 @@ MainWindowTest::MainWindowTest(QWidget *parent) :
     connect(ui->algoCombobox, SIGNAL(activated(int)), this, SLOT(clickOnAlgoComboBox(int)));
     connect(ui->depComboBox, SIGNAL(activated(int)), this, SLOT(updateDepArrInfos()));
     connect(ui->arrComboBox, SIGNAL(activated(int)), this, SLOT(updateDepArrInfos()));
-    connect(ui->excelTable->model(), SIGNAL(dataChanged(QModelIndex, QModelIndex)), this, SLOT(excelTableViewChanged()));
+    connect(ui->excelTable->model(), SIGNAL(dataChanged(QModelIndex,QModelIndex)), this, SLOT(excelTableViewChanged()));
 }
 
 MainWindowTest::~MainWindowTest()
@@ -95,8 +101,12 @@ void MainWindowTest::clickOnBoucle(int checkState) {
 void MainWindowTest::clickOnAlgoComboBox(int index) {
     ui->heures->setVisible(index != TSP_INDEX);
     ui->boucle->setVisible(index == TSP_INDEX);
+    ui->optWidget->setVisible(index == TSP_INDEX);
+    ui->threadWidget->setVisible(index == TSP_INDEX);
     if(index == BREITLING_INDEX)
         ui->arriveeBoxWidget->setEnabled(true);
+
+    checkDepArrBoucleValidity();
 }
 
 void MainWindowTest::updateComboBoxDepArr() {
