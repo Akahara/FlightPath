@@ -1,3 +1,4 @@
+#include "dialogwindow.h"
 #include "mainwindow.h"
 #include "mainwindowtest.h"
 
@@ -18,8 +19,9 @@ int main(int argc, char *argv[])
     //QString styleSheet = QLatin1String(styleSheetFile.readAll());
     //a.setStyleSheet(styleSheet);
 
-    MainWindowTest mainWindow;
-    mainWindow.resize(1400,800);
+    //MainWindowTest mainWindow;
+    DialogWindow mainWindow;
+    mainWindow.resize(400,250);
 
     // 获取主屏幕信息
     QScreen *screen = QGuiApplication::primaryScreen();

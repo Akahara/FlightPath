@@ -42,6 +42,7 @@ SOURCES += \
     Solver/vendor/OpenXLSX/sources/XLXmlData.cpp \
     Solver/vendor/OpenXLSX/sources/XLXmlFile.cpp \
     Solver/vendor/OpenXLSX/sources/XLZipArchive.cpp \
+    dialogwindow.cpp \
     excelhelper.cpp \
     main.cpp \
     mainwindow.cpp \
@@ -114,6 +115,7 @@ HEADERS += \
     Solver/vendor/OpenXLSX/headers/XLXmlParser.hpp \
     Solver/vendor/OpenXLSX/headers/XLZipArchive.hpp \
     Solver/vendor/OpenXLSX/sources/utilities/XLUtilities.hpp \
+    dialogwindow.h \
     excelhelper.h \
     fuelmodel.h \
     mainwindow.h \
@@ -123,6 +125,7 @@ HEADERS += \
     statusmodel.h
 
 FORMS += \
+    dialogwindow.ui \
     mainwindow.ui \
     mainwindowtest.ui
 
