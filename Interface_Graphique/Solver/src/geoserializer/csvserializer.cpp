@@ -87,24 +87,32 @@ GeoMap CSVSerializer::parseMap(const std::filesystem::path &file) const
 
 void CSVSerializer::writePath(const std::filesystem::path &file, const Path &path) const
 {
-    std::ofstream csvFile;
-    csvFile.open(file, std::ios::app);
+    std::ofstream csvFile{ file };
 
-    if (!csvFile.is_open())
-    {
-        throw std::runtime_error("Error while opening the file \"" + file.string() + "\"");
+    for (const Station *s : path.getStations()) {
+        csvFile
+          << s->getOACI() << ";"
+          << s->getName() << ";"
+          << s->getLocation().lat << ";"
+          << s->getLocation().lon << ";"
+          << s->getStatus() << ";"
+          << s->getNightVFR() << ";"
+          << s->getFuel() << ";\n";
     }
+}
 
-    for (const Station *i : path.getStations())
-    {
-        csvFile << i->getOACI() << ";";
-        csvFile << i->getName() << ";";
-        csvFile << i->getLocation().lat << ";";
-        csvFile << i->getLocation().lon << ";";
-        csvFile << i->getStatus() << ";";
-        csvFile << i->getNightVFR() << ";";
-        csvFile << i->getFuel() << ";\n";
+void CSVSerializer::writeMap(const GeoMap &map, const std::filesystem::path &path) const
+{
+    std::ofstream file{ path };
+
+    for(const Station &s : map.getStations()) {
+        file
+          << s.getOACI() << ";"
+          << s.getName() << ";"
+          << s.getLocation().lat << ";"
+          << s.getLocation().lon << ";"
+          << s.getStatus() << ";"
+          << s.getNightVFR() << ";"
+          << s.getFuel() << ";\n";
     }
-
-    csvFile.close();
 }

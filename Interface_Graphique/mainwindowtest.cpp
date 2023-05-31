@@ -238,7 +238,6 @@ void MainWindowTest::runSolver() {
       std::unique_ptr<PathSolver> solver;
       ProblemMap problemMap;
 
-
       for(const Station &station : m_excelModel.getStations()) {
           if(station.isExcluded() || m_statusModel.isExcluded(station))
               continue;

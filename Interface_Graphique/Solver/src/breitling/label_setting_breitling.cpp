@@ -25,6 +25,34 @@
 #include "structures.h"
 
 /*
+ * Label setting
+ *
+ * S = {initial label} // discovered labels, takes part is domination checks
+ * R = {initial label} // explorable labels, sorted by score
+ * besttime = +inf
+ * bestlabel = null
+ * while R is not empty
+ *   pick the label L with the highest score
+ *   remove L from R
+ *   if lowerbound(L) > besttime
+ *     continue
+ *   E = explore(L)
+ *    for L' in E
+ *      if there is a L" in S dominating L'
+ *        continue
+ *      for all labels L" dominated by L'
+ *        remove L" from S and from R if it is was there
+ *        continue
+ *      if L' is acceptable
+ *        if time(L') < besttime
+ *          besttime = time(L')
+ *          bestlabel = L'
+ *      else
+ *        add L' to S and R
+ * return bestlabel
+ */
+
+/*
  * Indices, Allocators and Memory
  *
  * The label setting algorithm is very memory hungry,
@@ -78,34 +106,6 @@
  * explore already explored I_r.
  */
 
-/*
- * Label setting
- * 
- * S = {initial label} // discovered labels, takes part is domination checks
- * R = {initial label} // explorable labels, sorted by score
- * besttime = +inf
- * bestlabel = null
- * while R is not empty
- *   pick the label L with the highest score
- *   remove L from R
- *   if lowerbound(L) > besttime
- *     continue
- *   E = explore(L)
- *    for L' in E
- *      if there is a L" in S dominating L'
- *        continue
- *      for all labels L" dominated by L'
- *        remove L" from S and from R if it is was there
- *        continue
- *      if L' is acceptable
- *        if time(L') < besttime
- *          besttime = time(L')
- *          bestlabel = L'
- *      else
- *        add L' to S and R
- * return bestlabel
- */
-
 /* when set, if too many labels are discovered the exploration queue will
  * not grow to fit them all, they will still be stored to do domination
  * checks. When not set the queue contains a cache of the best labels, 
@@ -113,7 +113,7 @@
 #define LIMITED_CONCURRENT_LABELS 10000 
 /* when defined a quick heuristic is used to find a path(see breitlingnatural.cpp)
  * the found path length is used as a lower bound for the label setting */
-//#define USE_HEURISTIC_LOWER_BOUND
+#define USE_HEURISTIC_LOWER_BOUND
 /* maximum search time, in seconds */
 //#define LIMITED_SEARCH_TIME 15
 
@@ -790,7 +790,7 @@ public:
   }
 
 private:
-  disttime_t lowerBound(const Label &label)
+  inline disttime_t lowerBound(const Label &label)
   {
     unsigned char regionCountLeftToExplore = breitling_constraints::MANDATORY_REGION_COUNT - utils::countRegions(label.visitedRegions);
     disttime_t minDistanceForRegions = m_minDistancePerRemainingRegionCount[regionCountLeftToExplore];
@@ -801,38 +801,12 @@ private:
   }
 
   // Labels with high scores will be explored first
-  score_t scoreLabel(const Label &label)
+  inline score_t scoreLabel(const Label &label)
   {
-#if 0
-    // a label is good if...
-    float score = 0;
-    // it visited a lot of stations
-    score += label.visitedStationCount * .1f;
-    // it visited an appropriate number of regions
-    // where "appropriate" means having explored regions at the same rate as explored stations
-    score -= std::max(std::abs((float)utils::countRegions(label.visitedRegions) / breitling_constraints::MANDATORY_REGION_COUNT - (float)label.visitedStationCount / breitling_constraints::MINIMUM_STATION_COUNT) - .25f, 0.f);
-    // it has fuel, but not too much
-    score += label.currentFuel * .1f; // TODO score higher whenever (fuel is high)==(night is soon)
-    // it is quick
-    score -= label.currentTime * .3f;
-    // there should more be factors here, the distance between stations and the plane speed/fuel capacity is ignored
-    // this attempt at scoring was discarded because it was way to expensive to compute
-    return score;
-#elif 1
-    float score = 0;
-    score += label.visitedStationCount;
-    score -= label.currentTime * .3f;
-    if (m_bestTime != m_noBestTime)
-      score += (float)rand()/RAND_MAX*3.f;
-    return score;
-#elif 1
     float score = 0;
     score += label.visitedStationCount;
     score -= label.currentTime * .3f;
     return score;
-#else
-    return (float)rand() / RAND_MAX;
-#endif
   }
 
   inline void tryExplore(const Label &source, std::vector<Label> &explorationLabels, stationidx_t nextStationIdx, disttime_t distanceToNext)
@@ -985,7 +959,6 @@ public:
     }
 
     size_t iteration = 0;
-    size_t solutionsFound = 0;
     long long searchBeginTime = utils::currentTimeMs();
 
     // loop until we forcibly stop the algorithm, a second stopping condition is in the loop
@@ -1023,7 +996,6 @@ public:
             bestPath = nextLabel.pathFragment;
             m_bestTime = nextLabel.currentTime;
             std::cout << "improved " << (utils::currentTimeMs() - searchBeginTime)/1000.f << " " << (m_bestTime - m_dataset->departureTime) << std::endl;
-            //writeStations(nextLabel.visitedStations, lastStation, *m_geomap, "out_"+std::to_string(solutionsFound++)+".svg");
           }
         } else {
           // remove dominated labels

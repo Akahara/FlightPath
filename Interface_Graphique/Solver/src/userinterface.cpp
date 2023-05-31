@@ -4,7 +4,7 @@
 
 #include <fstream>
 
-void interface_mock::writePathToFile(const ProblemMap &geomap, const ProblemPath &path, const std::filesystem::path &filePath)
+void svg_export::writePathToFile(const ProblemMap &geomap, const ProblemPath &path, const std::filesystem::path &filePath)
 {
   std::ofstream file{ filePath };
 
