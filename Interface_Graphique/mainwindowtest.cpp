@@ -20,9 +20,6 @@ MainWindowTest::MainWindowTest(QWidget *parent) :
     // Set LabelNbThreads with max hardware threads
     ui->labelNbThreads->setText("(Le maximum semble être " + QString::number(std::thread::hardware_concurrency()) + " sur cette machine)");
 
-    // Hide "heures widget" by default
-    ui->heures->setVisible(false);
-
     // Set up excel table view
     ui->excelTable->setModel(&m_excelModel);
     ui->excelTable->verticalHeader()->hide();
@@ -35,17 +32,17 @@ MainWindowTest::MainWindowTest(QWidget *parent) :
     ui->VFRViewTable->setModel(&m_nightFlightModel);
     ui->VFRViewTable->horizontalHeader()->setSectionResizeMode(QHeaderView::ResizeToContents);
 
-
-
     // Connect signals and slots
     connect(ui->actionOuvrir, SIGNAL(triggered()), this, SLOT(openFileDialog()));
     connect(ui->actionEnregistrer, SIGNAL(triggered()), this, SLOT(saveFileDialog()));
     connect(ui->boucle, SIGNAL(stateChanged(int)), this, SLOT(clickOnBoucle(int)));
-    connect(ui->algoCombobox, SIGNAL(activated(int)), this, SLOT(clickOnAlgoComboBox(int)));
+    connect(ui->algoCombobox, SIGNAL(activated(int)), this, SLOT(updateFieldsVisibility()));
     connect(ui->depComboBox, SIGNAL(activated(int)), this, SLOT(updateDepArrInfos()));
     connect(ui->arrComboBox, SIGNAL(activated(int)), this, SLOT(updateDepArrInfos()));
     connect(ui->excelTable->model(), SIGNAL(dataChanged(QModelIndex, QModelIndex)), this, SLOT(excelTableViewChanged()));
     connect(ui->computeButton, SIGNAL(clicked(bool)), this, SLOT(runSolver()));
+
+    updateFieldsVisibility();
 }
 
 MainWindowTest::~MainWindowTest()
@@ -114,11 +111,13 @@ void MainWindowTest::clickOnBoucle(int checkState) {
     checkDepArrBoucleValidity();
 }
 
-void MainWindowTest::clickOnAlgoComboBox(int index) {
-    ui->heures->setVisible(index != TSP_INDEX);
+void MainWindowTest::updateFieldsVisibility() {
+    int index = ui->algoCombobox->currentIndex();
+    ui->heures->setVisible(index == BREITLING_INDEX);
     ui->boucle->setVisible(index == TSP_INDEX);
     ui->optWidget->setVisible(index == TSP_INDEX);
     ui->threadWidget->setVisible(index == TSP_INDEX);
+    ui->breitlingSolverSelection->setVisible(index == BREITLING_INDEX);
     if(index == BREITLING_INDEX)
         ui->arriveeBoxWidget->setEnabled(true);
     checkDepArrBoucleValidity();
@@ -268,7 +267,10 @@ void MainWindowTest::runSolver() {
           dataset.timeToRefuel = controlsToDaytime(nullptr, ui->tmpRav);
           dataset.departureStation = departureStation;
           dataset.targetStation = targetStation;
-          solver = std::make_unique<NaturalBreitlingSolver>(dataset);
+          if(ui->breitlingSolverCombo->currentIndex() == 0)
+            solver = std::make_unique<NaturalBreitlingSolver>(dataset);
+          else
+            solver = std::make_unique<LabelSettingBreitlingSolver>(dataset);
       }
 
       static bool stopFlag = false;

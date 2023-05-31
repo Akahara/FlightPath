@@ -7,7 +7,7 @@
     <x>0</x>
     <y>0</y>
     <width>1094</width>
-    <height>752</height>
+    <height>823</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -68,6 +68,57 @@
             <item>
              <property name="text">
               <string>Breitling</string>
+             </property>
+            </item>
+           </widget>
+          </item>
+         </layout>
+        </widget>
+       </item>
+       <item>
+        <widget class="QWidget" name="breitlingSolverSelection" native="true">
+         <property name="maximumSize">
+          <size>
+           <width>300</width>
+           <height>16777215</height>
+          </size>
+         </property>
+         <layout class="QHBoxLayout" name="horizontalLayout_9">
+          <property name="leftMargin">
+           <number>12</number>
+          </property>
+          <property name="topMargin">
+           <number>6</number>
+          </property>
+          <item>
+           <widget class="QLabel" name="label_18">
+            <property name="maximumSize">
+             <size>
+              <width>150</width>
+              <height>16777215</height>
+             </size>
+            </property>
+            <property name="text">
+             <string>Algorithme de résolution :</string>
+            </property>
+           </widget>
+          </item>
+          <item>
+           <widget class="QComboBox" name="breitlingSolverCombo">
+            <property name="maximumSize">
+             <size>
+              <width>150</width>
+              <height>16777215</height>
+             </size>
+            </property>
+            <item>
+             <property name="text">
+              <string>Naturel (rapide)</string>
+             </property>
+            </item>
+            <item>
+             <property name="text">
+              <string>Label setting (meilleurs résultats)</string>
              </property>
             </item>
            </widget>
@@ -366,24 +417,6 @@
          </layout>
         </widget>
        </item>
-       <item>
-        <widget class="QWidget" name="optThreadBox" native="true">
-         <property name="sizePolicy">
-          <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
-           <horstretch>0</horstretch>
-           <verstretch>0</verstretch>
-          </sizepolicy>
-         </property>
-         <layout class="QGridLayout" name="gridLayout_4">
-          <property name="leftMargin">
-           <number>12</number>
-          </property>
-          <property name="topMargin">
-           <number>1</number>
-          </property>
-         </layout>
-        </widget>
-       </item>
        <item alignment="Qt::AlignLeft">
         <widget class="QWidget" name="optWidget" native="true">
          <layout class="QHBoxLayout" name="horizontalLayout_10">
@@ -400,6 +433,9 @@
               <horstretch>0</horstretch>
               <verstretch>0</verstretch>
              </sizepolicy>
+            </property>
+            <property name="toolTip">
+             <string>Algorithme appliqué après avoir trouvé une solution, augmente le temps de résolution</string>
             </property>
             <property name="text">
              <string>Algorithme d'optimisation : </string>
@@ -451,6 +487,9 @@
               <verstretch>0</verstretch>
              </sizepolicy>
             </property>
+            <property name="toolTip">
+             <string>Accélère le calcul en utilisant d'avantage de ressources de l'ordinateur</string>
+            </property>
             <property name="text">
              <string>Nombre de threads :</string>
             </property>
@@ -470,9 +509,12 @@
               <height>16777215</height>
              </size>
             </property>
+            <property name="minimum">
+             <number>1</number>
+            </property>
            </widget>
           </item>
-          <item alignment="Qt::AlignLeft">
+          <item>
            <widget class="QLabel" name="labelNbThreads">
             <property name="text">
              <string/>
@@ -573,7 +615,7 @@
               </widget>
              </item>
              <item>
-              <widget class="QWidget" name="" native="true">
+              <widget class="QWidget" name="widget" native="true">
                <layout class="QGridLayout" name="gridLayout">
                 <item row="0" column="1">
                  <widget class="QLabel" name="depOACILabel">
@@ -703,7 +745,7 @@
               </widget>
              </item>
              <item>
-              <widget class="QWidget" name="" native="true">
+              <widget class="QWidget" name="widget" native="true">
                <layout class="QGridLayout" name="gridLayout_2">
                 <item row="2" column="1">
                  <widget class="QLabel" name="arrVFRLabel">
@@ -1041,7 +1083,7 @@
      <x>0</x>
      <y>0</y>
      <width>1094</width>
-     <height>22</height>
+     <height>21</height>
     </rect>
    </property>
    <widget class="QMenu" name="menuFichier">

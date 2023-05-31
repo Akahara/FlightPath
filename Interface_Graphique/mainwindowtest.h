@@ -43,7 +43,7 @@ public slots:
     void saveFileDialog();
     void updateGeoMapFromFile();
     void clickOnBoucle(int checkState);
-    void clickOnAlgoComboBox(int index);
+    void updateFieldsVisibility();
     void updateComboBoxDepArr();
     void updateDepArrInfos();
     void checkDepArrBoucleValidity();

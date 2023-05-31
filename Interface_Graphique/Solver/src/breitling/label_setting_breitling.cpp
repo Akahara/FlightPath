@@ -939,8 +939,8 @@ public:
 
 #ifdef USE_HEURISTIC_LOWER_BOUND
     // quickly find an upper bound
-    Path heuristicPath = NaturalBreitlingSolver(*m_dataset).solveForPath(*m_geomap);
-    noBestTime = bestTime = m_dataset->departureTime + utils::realDistanceToTimeDistance(heuristicPath.length(), *m_dataset);
+    ProblemPath heuristicPath = NaturalBreitlingSolver(*m_dataset).solveForPath(*m_geomap);
+    m_noBestTime = m_bestTime = m_dataset->departureTime + utils::realDistanceToTimeDistance(getLength(heuristicPath), *m_dataset);
 #endif
 
     { // create the initial label
