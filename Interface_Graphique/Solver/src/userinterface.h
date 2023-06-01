@@ -6,12 +6,7 @@
 #include "path.h"
 #include "pathsolver.h"
 
-class UserInterface {
-private:
-    // TODO design UserInterface
-};
-
-namespace interface_mock {
+namespace svg_export {
 
 void writePathToFile(const ProblemMap &geomap, const ProblemPath &path, const std::filesystem::path &file);
 
