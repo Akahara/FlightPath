@@ -149,3 +149,6 @@ INCLUDEPATH += \
     Solver/vendor/OpenXLSX/headers
 
 TARGET = FlightPath
+
+RESOURCES += \
+    resourcesfiles.qrc

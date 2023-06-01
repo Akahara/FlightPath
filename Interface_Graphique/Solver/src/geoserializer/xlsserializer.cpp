@@ -1,4 +1,5 @@
 #include "xlsserializer.h"
+#include "QtCore/qfile.h"
 
 #include <OpenXLSX.hpp>
 
@@ -63,11 +64,12 @@ void XLSSerializer::writePath(const std::filesystem::path& file, const Path& pat
     }
 
     // Copy the template file
-    std::filesystem::copy("FicheDeNavigationModel.xlsx", "FicheDeNavigation.xlsx");
+    QFile modelfile(":/resources/resources/FicheDeNavigationModel.xlsx");
+    QFile::copy(":/resources/resources/FicheDeNavigationModel.xlsx", QString::fromStdString(file.string()));
 
     // Open the file
     OpenXLSX::XLDocument doc;
-    doc.open("FicheDeNavigation.xlsx");
+    doc.open(file.string());
     auto wks = doc.workbook().worksheet("Sheet1");
 
     std::vector<const Station *> stations = path.getStations();
