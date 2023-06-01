@@ -1092,7 +1092,7 @@ public:
   }
 };
 
-ProblemPath LabelSettingBreitlingSolver::solveForPath(const ProblemMap &map, bool *stopFlag)
+ProblemPath LabelSettingBreitlingSolver::solveForPath(const ProblemMap &map, bool *stopFlag, int *progressPercentage)
 {
   LabelSetting labelSetting{ &map, &m_dataset };
   return labelSetting.labelSetting(stopFlag);

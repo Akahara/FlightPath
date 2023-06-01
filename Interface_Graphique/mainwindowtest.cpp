@@ -1,4 +1,5 @@
 #include "mainwindowtest.h"
+#include "dialogwindow.h"
 #include "ui_mainwindowtest.h"
 
 #include <algorithm>
@@ -234,10 +235,10 @@ static inline daytime_t controlsToDaytime(const QSpinBox *hoursSpinbox, const QS
 }
 
 void MainWindowTest::runSolver() {
+    static int progressPercentage = 0;
   std::thread runnerThread{[this]() {
       std::unique_ptr<PathSolver> solver;
       ProblemMap problemMap;
-
 
       for(const Station &station : m_excelModel.getStations()) {
           if(station.isExcluded() || m_statusModel.isExcluded(station))
@@ -252,8 +253,8 @@ void MainWindowTest::runSolver() {
 
       // generate the solver instance
       if(ui->algoCombobox->currentIndex() == TSP_INDEX) {
-          unsigned int nbThread = 2;
-          unsigned int optAlgo = 1;
+          unsigned int nbThread = ui->threadSpinBox->value();
+          unsigned int optAlgo = ui->optComboBox->currentIndex() == 0 ? 0 : ui->optComboBox->currentIndex() + 1; // 0, 2, 3
           bool loop = ui->boucle->checkState() == Qt::Checked;
           const ProblemStation *startStation = departureStation == -1 ? nullptr : &problemMap[departureStation];
           const ProblemStation *endStation = targetStation == -1 ? nullptr : &problemMap[targetStation];
@@ -273,9 +274,15 @@ void MainWindowTest::runSolver() {
       }
 
       static bool stopFlag = false;
-      solver->solveForPath(problemMap, &stopFlag);
+
+      solver->solveForPath(problemMap, &stopFlag, &progressPercentage);
   }};
 
   runnerThread.detach();
+
+  static DialogWindow dialogWindow(this);
+  dialogWindow.startProgress(&progressPercentage);
+
+  dialogWindow.exec();
 }
 

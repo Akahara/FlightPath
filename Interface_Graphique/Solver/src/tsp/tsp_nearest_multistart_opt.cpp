@@ -10,7 +10,7 @@
  * This method is multi-threaded and will use the number of threads specified in the constructor.
  */
 [[nodiscard]]
-ProblemPath TspNearestMultistartOptSolver::solveForPath(const ProblemMap &map, bool *stopFlag) {
+ProblemPath TspNearestMultistartOptSolver::solveForPath(const ProblemMap &map, bool *stopFlag, int *progressPercentage) {
     // Variables
     std::vector<std::thread> threads;
     std::mutex mutex;
@@ -26,7 +26,7 @@ ProblemPath TspNearestMultistartOptSolver::solveForPath(const ProblemMap &map, b
     // Run threads
     for (unsigned int i = 0; i < m_nbThread; i++) {
         std::thread thread{[&]() {
-            solveMultiStartThread(map, leftStations, bestPath, bestLength, mutex, stopFlag);
+            solveMultiStartThread(map, leftStations, bestPath, bestLength, mutex, stopFlag, progressPercentage);
         }};
         threads.push_back(std::move(thread));
     }
@@ -46,8 +46,8 @@ ProblemPath TspNearestMultistartOptSolver::solveForPath(const ProblemMap &map, b
  *
  * This method is used by the different threads.
  */
-void TspNearestMultistartOptSolver::solveMultiStartThread(const ProblemMap &map, std::vector<const ProblemStation *> &leftStations,
-                                                          ProblemPath &bestPath, nauticmiles_t &bestLength, std::mutex &mutex, bool *stopFlag) const {
+void TspNearestMultistartOptSolver::solveMultiStartThread(const ProblemMap &map, std::vector<const ProblemStation *> &leftStations, ProblemPath &bestPath,
+                                                          nauticmiles_t &bestLength, std::mutex &mutex, bool *stopFlag, int *progressPercentage) const {
     const ProblemStation *current_station;
 
     while (stopFlag == nullptr || !*stopFlag) {
@@ -60,6 +60,7 @@ void TspNearestMultistartOptSolver::solveMultiStartThread(const ProblemMap &map,
             break;
         }
         leftStations.pop_back();
+        *progressPercentage = (int)((1 - ((double)leftStations.size() / (double)map.size())) * 100);
         mutex.unlock();
 
         // Compute the distance matrix

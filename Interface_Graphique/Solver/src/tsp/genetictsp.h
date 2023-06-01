@@ -4,5 +4,5 @@
 
 class GeneticTSPSolver : public PathSolver {
 public:
-    virtual ProblemPath solveForPath(const ProblemMap &map, bool *stopFlag=nullptr) override;
+    virtual ProblemPath solveForPath(const ProblemMap &map, bool *stopFlag=nullptr, int *progressPercentage=nullptr) override;
 };

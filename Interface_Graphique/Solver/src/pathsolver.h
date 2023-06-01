@@ -64,6 +64,7 @@ public:
      * algorithms that end quickly or that cannot be interupted mid-way may choose
      * to ignore the flag completely.
      */
-    virtual ProblemPath solveForPath(const ProblemMap &map, bool *stopFlag=nullptr) = 0;
+    virtual ProblemPath solveForPath(const ProblemMap &map, bool *stopFlag=nullptr, int *progressPercentage=nullptr) = 0;
+
 };
 

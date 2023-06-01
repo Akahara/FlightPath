@@ -19,8 +19,8 @@ int main(int argc, char *argv[])
     //QString styleSheet = QLatin1String(styleSheetFile.readAll());
     //a.setStyleSheet(styleSheet);
 
-    //MainWindowTest mainWindow;
-    DialogWindow mainWindow;
+    MainWindowTest mainWindow;
+    //DialogWindow mainWindow;
     mainWindow.resize(400,250);
 
     // 获取主屏幕信息

@@ -142,7 +142,7 @@ const ProblemStation *NaturalBreitlingSolver::nearestAccessible(const ProblemMap
   return nearestStation;
 }
 
-ProblemPath NaturalBreitlingSolver::solveForPath(const ProblemMap &map, bool *stopFlag /*ignored*/)
+ProblemPath NaturalBreitlingSolver::solveForPath(const ProblemMap &map, bool *stopFlag /*ignored*/, int *progressPercentage /*ignored*/)
 {
   const Location destinationLocation = map[m_dataset.targetStation].getLocation();
   const std::vector<PathTarget> targets = generateTargets(map);

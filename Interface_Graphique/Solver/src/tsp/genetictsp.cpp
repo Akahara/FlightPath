@@ -123,7 +123,7 @@ public:
     }
 };
 
-ProblemPath GeneticTSPSolver::solveForPath(const ProblemMap &map, bool *stopFlag)
+ProblemPath GeneticTSPSolver::solveForPath(const ProblemMap &map, bool *stopFlag, int *progressPercentage)
 {
     TSPGenetics genetics{ map };
     return genetics.runEvolution(stopFlag);

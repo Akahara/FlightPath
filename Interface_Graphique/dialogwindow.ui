@@ -82,7 +82,7 @@
        </sizepolicy>
       </property>
       <property name="text">
-       <string>Annuler</string>
+       <string>Stop</string>
       </property>
      </widget>
     </item>

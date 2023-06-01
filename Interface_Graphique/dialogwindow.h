@@ -15,8 +15,16 @@ public:
     explicit DialogWindow(QWidget *parent = nullptr);
     ~DialogWindow();
 
+    void startProgress(int *progressPercentage);
+
+private slots:
+    void updateProgress(int progress);
+
 private:
     Ui::DialogWindow *ui;
+
+signals:
+    void progressUpdated(int progress);
 };
 
 #endif // DIALOGWINDOW_H
