@@ -10,7 +10,7 @@
  * This method is multi-threaded and will use the number of threads specified in the constructor.
  */
 [[nodiscard]]
-ProblemPath TspNearestMultistartOptSolver::solveForPath(const ProblemMap &map, bool *stopFlag, int *progressPercentage) {
+ProblemPath TspNearestMultistartOptSolver::solveForPath(const ProblemMap &map, SolverRuntime *runtime) {
     // Variables
     std::vector<std::thread> threads;
     std::mutex mutex;
@@ -26,7 +26,7 @@ ProblemPath TspNearestMultistartOptSolver::solveForPath(const ProblemMap &map, b
     // Run threads
     for (unsigned int i = 0; i < m_nbThread; i++) {
         std::thread thread{[&]() {
-            solveMultiStartThread(map, leftStations, bestPath, bestLength, mutex, stopFlag, progressPercentage);
+            solveMultiStartThread(map, leftStations, bestPath, bestLength, mutex, runtime);
         }};
         threads.push_back(std::move(thread));
     }
@@ -47,10 +47,10 @@ ProblemPath TspNearestMultistartOptSolver::solveForPath(const ProblemMap &map, b
  * This method is used by the different threads.
  */
 void TspNearestMultistartOptSolver::solveMultiStartThread(const ProblemMap &map, std::vector<const ProblemStation *> &leftStations, ProblemPath &bestPath,
-                                                          nauticmiles_t &bestLength, std::mutex &mutex, bool *stopFlag, int *progressPercentage) const {
+                                                          nauticmiles_t &bestLength, std::mutex &mutex, SolverRuntime *runtime) const {
     const ProblemStation *current_station;
 
-    while (stopFlag == nullptr || !*stopFlag) {
+    while (!runtime->userInterupted) {
         // Get the current station
         mutex.lock();
         if (!leftStations.empty()) {
@@ -60,7 +60,7 @@ void TspNearestMultistartOptSolver::solveMultiStartThread(const ProblemMap &map,
             break;
         }
         leftStations.pop_back();
-        *progressPercentage = (int)((1 - ((double)leftStations.size() / (double)map.size())) * 100);
+        runtime->currentProgress = 1 - (float)leftStations.size() / (float)map.size();
         mutex.unlock();
 
         // Compute the distance matrix
@@ -85,14 +85,15 @@ void TspNearestMultistartOptSolver::solveMultiStartThread(const ProblemMap &map,
         if (m_optAlgo == 0) {
             // Skip optimization
         } else if (m_optAlgo == 2) {
-            path = tsp_optimization::o2opt(path, map, &distances, stopFlag);
+            path = tsp_optimization::o2opt(path, map, &distances, &runtime->userInterupted);
         } else if (m_optAlgo == 3) {
-            path = tsp_optimization::o3opt(path, map, &distances, stopFlag);
+            path = tsp_optimization::o3opt(path, map, &distances, &runtime->userInterupted);
         }
 
         // Start and end stations are not defined and the path is not a cycle (case 1)
         if (m_startStation == nullptr && !m_loop) {
-            int max = 0, current = 0, idx = 0;
+            nauticmiles_t max = 0, current = 0;
+            int idx = 0;
             for (int i = 0; i < path.size() - 2; i++) { // First to second last station
                 current = geometry::distance(path[i].getLocation(), path[i + 1].getLocation());
                 if (current > max) {
@@ -119,8 +120,8 @@ void TspNearestMultistartOptSolver::solveMultiStartThread(const ProblemMap &map,
             assert(it != path.end());
             std::rotate(path.begin(), it, path.end());
 
-            int left_dist = geometry::distance(path.front().getLocation(), path.back().getLocation());
-            int right_dist = geometry::distance(path.front().getLocation(), path[1].getLocation());
+            nauticmiles_t left_dist = geometry::distance(path.front().getLocation(), path.back().getLocation());
+            nauticmiles_t right_dist = geometry::distance(path.front().getLocation(), path[1].getLocation());
             if (right_dist > left_dist) {
                 std::reverse(path.begin(), path.end());
                 std::rotate(path.begin(), path.end(), path.end());

@@ -123,8 +123,8 @@ public:
     }
 };
 
-ProblemPath GeneticTSPSolver::solveForPath(const ProblemMap &map, bool *stopFlag, int *progressPercentage)
+ProblemPath GeneticTSPSolver::solveForPath(const ProblemMap &map, SolverRuntime *runtime)
 {
     TSPGenetics genetics{ map };
-    return genetics.runEvolution(stopFlag);
+    return genetics.runEvolution(&runtime->userInterupted);
 }

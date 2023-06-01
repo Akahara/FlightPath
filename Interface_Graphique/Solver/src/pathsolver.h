@@ -51,6 +51,13 @@ inline nauticmiles_t getLength(const ProblemPath &path) {
     return length;
 }
 
+struct SolverRuntime {
+  bool userInterupted = false;
+  size_t foundSolutionCount = 0;
+  size_t discoveredSolutionCount = 0;
+  float currentProgress = 0; // in range 0..1
+};
+
 class PathSolver {
 public:
     /*
@@ -64,7 +71,7 @@ public:
      * algorithms that end quickly or that cannot be interupted mid-way may choose
      * to ignore the flag completely.
      */
-    virtual ProblemPath solveForPath(const ProblemMap &map, bool *stopFlag=nullptr, int *progressPercentage=nullptr) = 0;
+    virtual ProblemPath solveForPath(const ProblemMap &map, SolverRuntime *runtime) = 0;
 
 };
 

@@ -930,7 +930,7 @@ private:
   }
 
 public:
-  ProblemPath labelSetting(bool *stopFlag)
+  ProblemPath labelSetting(SolverRuntime *runtime)
   {
     fragmentidx_t bestPath = Label::NO_FRAGMENT;
 
@@ -939,8 +939,9 @@ public:
 
 #ifdef USE_HEURISTIC_LOWER_BOUND
     // quickly find an upper bound
-    ProblemPath heuristicPath = NaturalBreitlingSolver(*m_dataset).solveForPath(*m_geomap);
+    ProblemPath heuristicPath = NaturalBreitlingSolver(*m_dataset).solveForPath(*m_geomap, runtime);
     m_noBestTime = m_bestTime = m_dataset->departureTime + utils::realDistanceToTimeDistance(getLength(heuristicPath), *m_dataset);
+    runtime->discoveredSolutionCount = 0;
 #endif
 
     { // create the initial label
@@ -962,7 +963,7 @@ public:
     long long searchBeginTime = utils::currentTimeMs();
 
     // loop until we forcibly stop the algorithm, a second stopping condition is in the loop
-    while (stopFlag==nullptr || !*stopFlag) {
+    while (!runtime->userInterupted) {
       iteration++;
       // take the best label currently yet-to-be-explored
       labelidx_t exploredIndex = m_bestLabelsQueue.popFront();
@@ -995,6 +996,7 @@ public:
             // record new best
             bestPath = nextLabel.pathFragment;
             m_bestTime = nextLabel.currentTime;
+            runtime->foundSolutionCount++;
             std::cout << "improved " << (utils::currentTimeMs() - searchBeginTime)/1000.f << " " << (m_bestTime - m_dataset->departureTime) << std::endl;
           }
         } else {
@@ -1027,6 +1029,7 @@ public:
             m_labelsPerStationsIndex[nextLabel.currentStation].push_back(nextLabelIndex);
             m_bestLabelsQueue.tryInsertInQueue(nextLabelIndex);
             PROFILING_COUNTER_INC(discovered_label);
+            runtime->discoveredSolutionCount++;
           }
         }
       }
@@ -1064,8 +1067,8 @@ public:
   }
 };
 
-ProblemPath LabelSettingBreitlingSolver::solveForPath(const ProblemMap &map, bool *stopFlag, int *progressPercentage)
+ProblemPath LabelSettingBreitlingSolver::solveForPath(const ProblemMap &map, SolverRuntime *runtime)
 {
   LabelSetting labelSetting{ &map, &m_dataset };
-  return labelSetting.labelSetting(stopFlag);
+  return labelSetting.labelSetting(runtime);
 }

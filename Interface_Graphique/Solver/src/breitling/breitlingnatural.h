@@ -44,7 +44,7 @@ public:
   {
   }
 
-  virtual ProblemPath solveForPath(const ProblemMap &map, bool *stopFlag=nullptr, int *progressPercentage=nullptr) override;
+  virtual ProblemPath solveForPath(const ProblemMap &map, SolverRuntime *runtime) override;
 
 private:
   std::vector<PathTarget> generateTargets(const ProblemMap &map);

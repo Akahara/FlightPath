@@ -4,6 +4,7 @@
 #include <stdexcept>
 #include <array>
 #include <iostream>
+#include <assert.h>
 
 #include "../geometry.h"
 
@@ -142,8 +143,11 @@ const ProblemStation *NaturalBreitlingSolver::nearestAccessible(const ProblemMap
   return nearestStation;
 }
 
-ProblemPath NaturalBreitlingSolver::solveForPath(const ProblemMap &map, bool *stopFlag /*ignored*/, int *progressPercentage /*ignored*/)
+ProblemPath NaturalBreitlingSolver::solveForPath(const ProblemMap &map, SolverRuntime *runtime /* ignored */)
 {
+  assert(m_dataset.targetStation != BreitlingData::NO_SPECIFIED_STATION);
+  assert(m_dataset.departureStation != BreitlingData::NO_SPECIFIED_STATION);
+
   const Location destinationLocation = map[m_dataset.targetStation].getLocation();
   const std::vector<PathTarget> targets = generateTargets(map);
 

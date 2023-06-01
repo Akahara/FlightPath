@@ -54,8 +54,8 @@ MainWindowTest::~MainWindowTest()
 
 void MainWindowTest::openFileDialog()
 {
-    QString fileName = QFileDialog::getOpenFileName(this, tr("Open File"), QString(),
-                                                    tr("(*.xls *.xlsx *.csv)"));
+    QString fileName = QFileDialog::getOpenFileName(this, "Ouvrir un fichier", QString(),
+                                                    "(*.xls *.xlsx *.csv)");
     if (fileName.isEmpty())
         return;
 
@@ -234,29 +234,31 @@ static inline daytime_t controlsToDaytime(const QSpinBox *hoursSpinbox, const QS
 }
 
 void MainWindowTest::runSolver() {
-    static int progressPercentage = 0;
-  std::thread runnerThread{[this]() {
+  SolverRuntime *runtime = new SolverRuntime{};
+  ProblemPath *finalPath = new ProblemPath{};
+  ProblemMap *problemMap = new ProblemMap{};
+
+  std::thread runnerThread{[this,runtime,finalPath,problemMap]() {
       std::unique_ptr<PathSolver> solver;
-      ProblemMap problemMap;
 
       for(const Station &station : m_excelModel.getStations()) {
           if(station.isExcluded() || m_statusModel.isExcluded(station))
               continue;
           bool isAccessibleAtNight = m_nightFlightModel.isAccessibleAtNight(station);
           bool canBeUsedToFuel = m_fuelModel.canBeUsedToFuel(station);
-          problemMap.emplace_back(&station, isAccessibleAtNight, canBeUsedToFuel);
+          problemMap->emplace_back(&station, isAccessibleAtNight, canBeUsedToFuel);
       }
 
-      size_t departureStation = ui->depComboBox->currentIndex()-1; // will be -1 if no departure station is selected
-      size_t targetStation = ui->arrComboBox->currentIndex()-1; // will be -1 if no target station is selected
+      int departureStation = ui->depComboBox->currentIndex()-1; // will be -1 if no departure station is selected
+      int targetStation = ui->arrComboBox->currentIndex()-1; // will be -1 if no target station is selected
 
       // generate the solver instance
       if(ui->algoCombobox->currentIndex() == TSP_INDEX) {
           unsigned int nbThread = ui->threadSpinBox->value();
           unsigned int optAlgo = ui->optComboBox->currentIndex() == 0 ? 0 : ui->optComboBox->currentIndex() + 1; // 0, 2, 3
           bool loop = ui->boucle->checkState() == Qt::Checked;
-          const ProblemStation *startStation = departureStation == -1 ? nullptr : &problemMap[departureStation];
-          const ProblemStation *endStation = targetStation == -1 ? nullptr : &problemMap[targetStation];
+          const ProblemStation *startStation = departureStation == -1 ? nullptr : &(*problemMap)[departureStation];
+          const ProblemStation *endStation = targetStation == -1 ? nullptr : &(*problemMap)[targetStation];
           solver = std::make_unique<TspNearestMultistartOptSolver>(nbThread, optAlgo, loop, startStation, endStation);
       } else {
           BreitlingData dataset;
@@ -270,21 +272,23 @@ void MainWindowTest::runSolver() {
           dataset.departureStation = departureStation;
           dataset.targetStation = targetStation;
           if(ui->breitlingSolverCombo->currentIndex() == 0)
-            solver = std::make_unique<NaturalBreitlingSolver>(dataset);
+            solver = std::make_unique<NaturalBreitlingSolver>(dataset); // TODO FIX do not run the natural solver when departure/target stations are not set
           else
             solver = std::make_unique<LabelSettingBreitlingSolver>(dataset);
       }
 
-      static bool stopFlag = false;
-
-      solver->solveForPath(problemMap, &stopFlag, &progressPercentage);
+      *finalPath = solver->solveForPath(*problemMap, runtime);
+      runtime->userInterupted = true; // tells the UI that the solver finished solving
   }};
 
-  runnerThread.detach();
-
-  static DialogWindow dialogWindow(this);
-  dialogWindow.startProgress(&progressPercentage);
-
+  DialogWindow dialogWindow(runtime, finalPath, problemMap, this);
+  dialogWindow.startProgress();
   dialogWindow.exec();
+
+  // suboptimal shared memory management
+  delete runtime;
+  delete finalPath;
+  delete problemMap;
+  runnerThread.join(); // the thread stopped already
 }
 

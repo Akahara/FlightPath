@@ -65,7 +65,7 @@ public:
      * This method is multi-threaded and will use the number of threads specified in the constructor.
      */
     [[nodiscard]]
-    virtual ProblemPath solveForPath(const ProblemMap &map, bool *stopFlag=nullptr, int *progressPercentage=nullptr) override;
+    virtual ProblemPath solveForPath(const ProblemMap &map, SolverRuntime *runtime) override;
 
 private:
     /*
@@ -75,7 +75,7 @@ private:
      * This method is used by the different threads.
      */
     void solveMultiStartThread(const ProblemMap &map, std::vector<const ProblemStation *> &leftStations, ProblemPath &bestPath,
-                               nauticmiles_t &bestLength, std::mutex &mutex, bool *stopFlag, int *progressPercentage) const;
+                               nauticmiles_t &bestLength, std::mutex &mutex, SolverRuntime *runtime) const;
 
     /*
      * Compute a path in the map passing through all the stations using the nearest neighbour algorithm.
