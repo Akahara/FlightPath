@@ -79,7 +79,7 @@
         <widget class="QWidget" name="breitlingSolverSelection" native="true">
          <property name="maximumSize">
           <size>
-           <width>300</width>
+           <width>430</width>
            <height>16777215</height>
           </size>
          </property>
@@ -105,9 +105,21 @@
           </item>
           <item>
            <widget class="QComboBox" name="breitlingSolverCombo">
+            <property name="sizePolicy">
+             <sizepolicy hsizetype="Minimum" vsizetype="Fixed">
+              <horstretch>0</horstretch>
+              <verstretch>0</verstretch>
+             </sizepolicy>
+            </property>
+            <property name="minimumSize">
+             <size>
+              <width>0</width>
+              <height>0</height>
+             </size>
+            </property>
             <property name="maximumSize">
              <size>
-              <width>150</width>
+              <width>16777215</width>
               <height>16777215</height>
              </size>
             </property>
@@ -119,6 +131,11 @@
             <item>
              <property name="text">
               <string>Label setting (meilleurs résultats)</string>
+             </property>
+            </item>
+            <item>
+             <property name="text">
+              <string>Solver par construction/optimisation</string>
              </property>
             </item>
            </widget>
@@ -1063,6 +1080,9 @@
        </item>
        <item>
         <widget class="QPushButton" name="computeButton">
+         <property name="enabled">
+          <bool>false</bool>
+         </property>
          <property name="text">
           <string>Calculer</string>
          </property>

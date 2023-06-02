@@ -11,6 +11,7 @@
 #include "Solver/src/tsp/tsp_nearest_multistart_opt.h"
 #include "Solver/src/breitling/breitlingnatural.h"
 #include "Solver/src/breitling/label_setting_breitling.h"
+#include "Solver/src/optimisation/optimisationSolver.h"
 
 MainWindowTest::MainWindowTest(QWidget *parent) :
     QMainWindow(parent),
@@ -42,6 +43,10 @@ MainWindowTest::MainWindowTest(QWidget *parent) :
     connect(ui->arrComboBox, SIGNAL(activated(int)), this, SLOT(updateDepArrInfos()));
     connect(ui->excelTable->model(), SIGNAL(dataChanged(QModelIndex, QModelIndex)), this, SLOT(excelTableViewChanged()));
     connect(ui->computeButton, SIGNAL(clicked(bool)), this, SLOT(runSolver()));
+    connect(ui->algoCombobox, SIGNAL(activated(int)), this, SLOT(checkSolverCanBeRun()));
+    connect(ui->depComboBox, SIGNAL(activated(int)), this, SLOT(checkSolverCanBeRun()));
+    connect(ui->arrComboBox, SIGNAL(activated(int)), this, SLOT(checkSolverCanBeRun()));
+    connect(ui->excelTable->model(), SIGNAL(dataChanged(QModelIndex, QModelIndex)), this, SLOT(checkSolverCanBeRun()));
 
     updateFieldsVisibility();
 }
@@ -106,6 +111,7 @@ void MainWindowTest::updateGeoMapFromFile()
     for(const Station &s : geoMap.getStations())
       stations.append(s);
     m_excelModel.setStations(stations);
+    checkSolverCanBeRun();
 }
 
 void MainWindowTest::clickOnBoucle(int checkState) {
@@ -227,6 +233,22 @@ void MainWindowTest::excelTableViewChanged() {
     updateDepArrInfos();
 }
 
+void MainWindowTest::checkSolverCanBeRun()
+{
+    ui->computeButton->setEnabled(true);
+    if(m_excelModel.getStations().isEmpty()) {
+        ui->computeButton->setEnabled(false);
+    } else if(ui->algoCombobox->currentIndex() == BREITLING_INDEX) {
+        int departureStation = ui->depComboBox->currentIndex() - 1;
+        int targetStation = ui->arrComboBox->currentIndex() - 1;
+        switch(ui->breitlingSolverCombo->currentIndex()) {
+        case 0 /* natural solver      */: ui->computeButton->setEnabled(departureStation >= 0 && targetStation >= 0 && targetStation != departureStation); return;
+        case 1 /* label setting       */: ui->computeButton->setEnabled(departureStation >= 0 && targetStation != departureStation); return;
+        case 2 /* optimization solver */: ui->computeButton->setEnabled(departureStation >= 0 && targetStation >= 0 && targetStation != departureStation); return;
+        }
+    }
+}
+
 static inline daytime_t controlsToDaytime(const QSpinBox *hoursSpinbox, const QSpinBox *minutesSpinBox) {
     return
         (hoursSpinbox==nullptr ? 0 : hoursSpinbox->value()) +
@@ -237,8 +259,12 @@ void MainWindowTest::runSolver() {
   SolverRuntime *runtime = new SolverRuntime{};
   ProblemPath *finalPath = new ProblemPath{};
   ProblemMap *problemMap = new ProblemMap{};
+  SolverExecutionState state;
+  state.finalPath = finalPath;
+  state.originalMap = problemMap;
+  state.solverRuntime = runtime;
 
-  std::thread runnerThread{[this,runtime,finalPath,problemMap]() {
+  std::thread runnerThread{[this,&state,runtime,finalPath,problemMap]() {
       std::unique_ptr<PathSolver> solver;
 
       for(const Station &station : m_excelModel.getStations()) {
@@ -271,17 +297,19 @@ void MainWindowTest::runSolver() {
           dataset.timeToRefuel = controlsToDaytime(nullptr, ui->tmpRav);
           dataset.departureStation = departureStation;
           dataset.targetStation = targetStation;
-          if(ui->breitlingSolverCombo->currentIndex() == 0)
-            solver = std::make_unique<NaturalBreitlingSolver>(dataset); // TODO FIX do not run the natural solver when departure/target stations are not set
-          else
-            solver = std::make_unique<LabelSettingBreitlingSolver>(dataset);
+          switch(ui->breitlingSolverCombo->currentIndex()) {
+          default:
+          case 0: solver = std::make_unique<NaturalBreitlingSolver>(dataset); break;
+          case 1: solver = std::make_unique<LabelSettingBreitlingSolver>(dataset); break;
+          case 2: solver = std::make_unique<OptimisationSolver>(dataset); break;
+          }
       }
 
       *finalPath = solver->solveForPath(*problemMap, runtime);
-      runtime->userInterupted = true; // tells the UI that the solver finished solving
+      state.finishedExecution = true; // tells the UI that the solver finished solving
   }};
 
-  DialogWindow dialogWindow(runtime, finalPath, problemMap, this);
+  DialogWindow dialogWindow(&state, this);
   dialogWindow.startProgress();
   dialogWindow.exec();
 

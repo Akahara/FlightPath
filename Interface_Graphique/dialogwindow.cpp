@@ -13,12 +13,10 @@
 
 #define SLEEP_TIME 500
 
-DialogWindow::DialogWindow(SolverRuntime *solverRuntime, ProblemPath *finalPath, ProblemMap *originalMap, QWidget *parent) :
+DialogWindow::DialogWindow(SolverExecutionState *solverState, QWidget *parent) :
     QDialog(parent, Qt::CustomizeWindowHint | Qt::WindowTitleHint),
     ui(new Ui::DialogWindow),
-    m_solverRuntime(solverRuntime),
-    m_finalPath(finalPath),
-    m_originalMap(originalMap)
+    m_solverState(solverState)
 {
     ui->setupUi(this);
 
@@ -39,7 +37,7 @@ DialogWindow::~DialogWindow()
 void DialogWindow::startProgress() {
 
     std::thread progressThread([this]() {
-        while (!m_solverRuntime->userInterupted) {
+        while (!m_solverState->finishedExecution) {
             std::this_thread::sleep_for(std::chrono::milliseconds(SLEEP_TIME));
             emit progressUpdated();
         }
@@ -50,23 +48,22 @@ void DialogWindow::startProgress() {
 }
 
 void DialogWindow::cancelSolver() {
-    m_solverRuntime->userInterupted = true;
+    m_solverState->solverRuntime->userInterupted = true;
     ui->cancelBtn->setEnabled(false);
-    m_userForcedTermination = true;
 }
 
 void DialogWindow::updateProgress() {
-    int progressPercentage = (int)(m_solverRuntime->currentProgress*100);
+    int progressPercentage = (int)(m_solverState->solverRuntime->currentProgress*100);
     ui->progressBar->setValue(progressPercentage);
-    if(m_solverRuntime->foundSolutionCount == 0)
+    if(m_solverState->solverRuntime->discoveredSolutionCount == 0)
         ui->progressBar->setFormat(QString::number(progressPercentage) + "%");
     else
-        ui->progressBar->setFormat(QString::number(m_solverRuntime->foundSolutionCount) + " solutions découvertes, " + QString::number(m_solverRuntime->discoveredSolutionCount) + " restent à explorer");
+        ui->progressBar->setFormat(QString::number(m_solverState->solverRuntime->foundSolutionCount) + " solutions découvertes, " + QString::number(m_solverState->solverRuntime->discoveredSolutionCount) + " restent à explorer");
     ui->progressBar->update();
 }
 
 void DialogWindow::onSolverFinished() {
-  if(m_userForcedTermination) {
+  if(m_solverState->solverRuntime->userInterupted && m_solverState->solverRuntime->foundSolutionCount == 0) {
       close();
   } else {
       ui->finishedWidget->setVisible(true);
@@ -86,7 +83,7 @@ void DialogWindow::saveFlightMapToFile() {
         serializer = std::make_unique<CSVSerializer>();
 
     Path path{};
-    for(ProblemStation &s : *m_finalPath)
+    for(ProblemStation &s : *m_solverState->finalPath)
         path.getStations().push_back(s.getOriginalStation());
     serializer->writePath(filePath.toStdString(), path);
 }
@@ -99,8 +96,8 @@ void DialogWindow::saveMapToFile() {
     std::ofstream outFile{ filePath.toStdString() };
 
     kml_export::writeHeader(outFile);
-    kml_export::writeAllStationsLayer(outFile, *m_originalMap);
-    kml_export::writeProblemStationsLayer(outFile, *m_originalMap); // TODO do not write problem stations for TSP
-    kml_export::writePathLayer(outFile, *m_finalPath, "Chemin");
+    kml_export::writeAllStationsLayer(outFile, *m_solverState->originalMap);
+    kml_export::writeProblemStationsLayer(outFile, *m_solverState->originalMap); // TODO do not write problem stations for TSP
+    kml_export::writePathLayer(outFile, *m_solverState->finalPath, "Chemin");
     kml_export::writeFooter(outFile);
 }

@@ -49,6 +49,7 @@ public slots:
     void checkDepArrBoucleValidity();
     void updateFilterViews();
     void excelTableViewChanged();
+    void checkSolverCanBeRun();
     void runSolver();
 };
 

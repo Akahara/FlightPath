@@ -938,10 +938,13 @@ public:
     explorationLabels.reserve(100);
 
 #ifdef USE_HEURISTIC_LOWER_BOUND
-    // quickly find an upper bound
-    ProblemPath heuristicPath = NaturalBreitlingSolver(*m_dataset).solveForPath(*m_geomap, runtime);
-    m_noBestTime = m_bestTime = m_dataset->departureTime + utils::realDistanceToTimeDistance(getLength(heuristicPath), *m_dataset);
-    runtime->discoveredSolutionCount = 0;
+    ProblemPath heuristicPath;
+    // quickly find an upper bound (the natural solver cannot run if a target station is not specified)
+    if(m_dataset->targetStation != BreitlingData::NO_SPECIFIED_STATION) {
+      heuristicPath = NaturalBreitlingSolver(*m_dataset).solveForPath(*m_geomap, runtime);
+      m_noBestTime = m_bestTime = m_dataset->departureTime + utils::realDistanceToTimeDistance(getLength(heuristicPath), *m_dataset);
+      runtime->discoveredSolutionCount = 0;
+    }
 #endif
 
     { // create the initial label

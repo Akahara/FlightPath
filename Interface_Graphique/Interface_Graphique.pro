@@ -19,6 +19,7 @@ SOURCES += \
     Solver/src/tsp/genetictsp.cpp \
     Solver/src/tsp/tsp_nearest_multistart_opt.cpp \
     Solver/src/tsp/tsp_optimization.cpp \
+    Solver/src/optimisation/optimisationSolver.cpp \
     Solver/src/userinterface.cpp \
     Solver/vendor/OpenXLSX/external/pugixml/pugixml.cpp \
     Solver/vendor/OpenXLSX/sources/XLCell.cpp \
