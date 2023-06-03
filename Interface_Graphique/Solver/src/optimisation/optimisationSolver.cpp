@@ -1,7 +1,7 @@
 #include "optimisationSolver.h"
 
 #define NUMBER_REGION 4
-
+#define FUEL_SECURITY_PERCENTAGE 0.25
 
 #include <map>
 #include <iostream>
@@ -68,7 +68,7 @@ std::vector<ProblemMap*> OptimisationSolver::seperateRegion(const ProblemMap& ma
 */
 void OptimisationSolver::initializePath(const std::vector<ProblemMap*> regions, ProblemStation* startingProblemStation, ProblemStation* endProblemStation)
 {
-	
+	chemin.clear();
 	srand((unsigned)time(NULL));
 	chemin.emplace_back(startingProblemStation);
 
@@ -250,7 +250,7 @@ ProblemPath OptimisationSolver::solveForPath(const ProblemMap& map, SolverRuntim
 
 				if (chemin.size() >= breitling_constraints::MINIMUM_STATION_COUNT)
 				{
-					chemin.clear();
+				
 					initializePath(seperateRegion(map), &startingProblemStation, &endProblemStation);
 				}
 				
@@ -332,6 +332,8 @@ ProblemStation* OptimisationSolver::stationSelectionInReach(const ProblemMap& ma
 	timedistance_t ratio = DBL_MAX;
 	std::vector<ProblemStation> reachableProblemStations{};
 	Station* destinationStation = (Station*)destinationProblemStation.getOriginalStation();
+	timedistance_t calculatedRatio;
+	Location halfWayPoint = tools::findHalfWayCoordinates(startProblemStation.getLocation(), destinationProblemStation.getLocation());
 
 	
 	reachableProblemStations = RefuelableStation(map, startProblemStation, *travel,refuelable);
@@ -345,22 +347,11 @@ ProblemStation* OptimisationSolver::stationSelectionInReach(const ProblemMap& ma
 	for (ProblemStation i : reachableProblemStations)
 	{
 		const Station* currentStation = i.getOriginalStation();
-		timedistance_t calculatedRatio =  geometry::distance(i.getLocation(), destinationProblemStation.getLocation())  / geometry::distance(i.getLocation(), startProblemStation.getLocation());
-		calculatedRatio = sqrt(calculatedRatio * calculatedRatio) ;
-		if (!refuelable)
-		{
-			//calculatedRatio = geometry::distance(i.getLocation(), destinationProblemStation.getLocation()) ; //Temps améliorer par 30%
-			//calculatedRatio = (geometry::distance(i.getLocation(), destinationProblemStation.getLocation()) + geometry::distance(i.getLocation(), startProblemStation.getLocation())) / 2
-			//calculatedRatio = sqrt(pow((geometry::distance(destinationProblemStation.getLocation(), startProblemStation.getLocation()) / 2) - geometry::distance(i.getLocation(), destinationProblemStation.getLocation()), 2));
-			//calculatedRatio = sqrt(pow((1- geometry::distance(destinationProblemStation.getLocation(), startProblemStation.getLocation()) / 2) - geometry::distance(i.getLocation(), destinationProblemStation.getLocation()), 2));
-			calculatedRatio = sqrt(pow((1- geometry::distance(destinationProblemStation.getLocation(), startProblemStation.getLocation()) / 2) - geometry::distance(i.getLocation(), startProblemStation.getLocation()), 2));
-		}
-		else
-		{
-			//calculatedRatio = sqrt(pow((geometry::distance(destinationProblemStation.getLocation(), startProblemStation.getLocation()) / 2) - geometry::distance(i.getLocation(), destinationProblemStation.getLocation()), 2));
-			//calculatedRatio = sqrt(calculatedRatio * calculatedRatio);
-			calculatedRatio = geometry::distance(i.getLocation(), destinationProblemStation.getLocation());
-		}
+		timedistance_t calculatedRatio, midwayPoint;
+		midwayPoint = (geometry::distance(destinationProblemStation.getLocation(), startProblemStation.getLocation()) / 2);
+	
+		calculatedRatio = geometry::distance(halfWayPoint, i.getLocation());
+		
 		if (geometry::distance(i.getLocation(), startProblemStation.getLocation()) + travel->distanceSinceLastRefuel / m_dataset.planeSpeed * m_dataset.planeFuelUsage > 0)
 		{
 			travel_variables trajet = *travel;
@@ -409,16 +400,13 @@ Finds the station which cannot be reached because the remaining fuel isn't suffi
 */
 void OptimisationSolver::findIntermidiateRefillableStation(const ProblemMap& map, const std::vector<const ProblemStation*> path, travel_variables * travel, bool *stopFlag)
 {
-	std::cout << std::endl << "************************************************************" << std::endl;
-	std::cout << "************************CORRECTION**************************" << std::endl;
-	std::cout << "************************************************************" << std::endl;
-
-	TestPath(chemin);
 	bool noMoreProblem = false;
 	travel_variables* voyage = travel;
 	do
 	{
+		//Pointe the iterator to the problematic station
 		std::vector< const ProblemStation*>::iterator stationIterator = chemin.begin() + findProblematicProblemStation(chemin, voyage);
+		//If the iterator points to the last station in the path, then there is no problem detected so there is no need to correct the station
 		if (stationIterator != chemin.end())
 		{
 
@@ -426,11 +414,9 @@ void OptimisationSolver::findIntermidiateRefillableStation(const ProblemMap& map
 
 			do
 			{
+				//We add a station before the problematic station : 
+				//if there is no station that the plane can fly to with the current disponible fuel, than we need to go back again
 				stationIterator = stationIterator - 1;
-				/*nauticmiles_t removeDistance = geometry::distance(stationIterator[0]->getLocation(), stationIterator[1]->getLocation());
-				voyage->flightDistance = voyage->flightDistance - removeDistance;
-				voyage->distanceSinceLastRefuel = voyage->distanceSinceLastRefuel - removeDistance;
-				voyage->currentTime = m_dataset.departureTime + voyage->flightDistance / m_dataset.planeSpeed;*/
 				updateTravelVariable(voyage, *stationIterator);
 			
 
@@ -467,10 +453,11 @@ Path OptimisationSolver::transformToPath(std::vector<const ProblemStation*> path
 	return trajet;
 }
 
+//A special problem can be face when we add a random station to the path: 
+//The distance between the start station and the first station may not be reachable by the plan so we add a station that can be used as a refuel station to connect the starting station and the first station
 void OptimisationSolver::addRefuelStationIfFirstStationUnreachable(const ProblemMap& map, std::vector<const ProblemStation*> path)
 {
 	travel_variables voyage;
-	updateTravelVariable(&voyage, path[1]);
 	double quantityOfFuelLeft =0;
 	//Max travel time with the current remaining fuel
 	double maxTimeTravel =0;
@@ -478,6 +465,7 @@ void OptimisationSolver::addRefuelStationIfFirstStationUnreachable(const Problem
 
 	do
 	{
+		updateTravelVariable(&voyage, path[1]);
 		quantityOfFuelLeft = m_dataset.planeFuelCapacity - voyage.distanceSinceLastRefuel / m_dataset.planeSpeed * m_dataset.planeFuelUsage;
 		maxTimeTravel = quantityOfFuelLeft * m_dataset.planeFuelUsage / m_dataset.planeSpeed;
 		if (maxTimeTravel < 0)
@@ -492,11 +480,13 @@ void OptimisationSolver::addRefuelStationIfFirstStationUnreachable(const Problem
 
 
 
+
+//Update the travel variable up to the selected point in the 
 void OptimisationSolver::updateTravelVariable(travel_variables* travel, const ProblemStation* point)
 {
 	bool reachedSelectedProblemStation = false;
 	travel->flightDistance = 0;
-	for (std::vector<const ProblemStation*>::iterator iteratorProblemStation = chemin.begin() + 1; iteratorProblemStation != chemin.end() && !reachedSelectedProblemStation/* && chemin.size() < 100 */; ++iteratorProblemStation)
+	for (std::vector<const ProblemStation*>::iterator iteratorProblemStation = chemin.begin() + 1; iteratorProblemStation != chemin.end() && !reachedSelectedProblemStation; ++iteratorProblemStation)
 	{
 		travel->flightDistance = geometry::distance(iteratorProblemStation[-1]->getLocation(), iteratorProblemStation[0]->getLocation());
 		travel->currentTime = m_dataset.departureTime + travel->flightDistance / m_dataset.planeSpeed;
@@ -527,84 +517,87 @@ std::vector<ProblemStation*> OptimisationSolver::connectProblemStationsTogether(
 	
 	
 	// At everypassage, we add a new station even if the next station is in reach
+	//This operation make it so that at least, one station is added at each passage 
 	skipList.emplace_back(new ProblemStation(endProblemStation));
 	
 	do
 	{
-		try
+		//Security mesure : If the remaining fuel is lower than FUEL_SECURITY_PERCENTAGE, the next station need to be a refuelable station
+		if (m_dataset.planeFuelCapacity - travel->distanceSinceLastRefuel / m_dataset.planeSpeed * m_dataset.planeFuelUsage < m_dataset.planeFuelCapacity * FUEL_SECURITY_PERCENTAGE)
 		{
-			SelectedProblemStation = stationSelectionInReach(map, *currentProblemStation, endProblemStation, skipList, travel, refuelable);
-			if (nullptr == SelectedProblemStation)
-			{
-				return std::vector<ProblemStation*>();
-			}
+			refuelable = true;
 		}
-		catch (std::runtime_error)
+		//If there is no station selected, than this route isn't vailable so we return an empty vector
+		SelectedProblemStation = stationSelectionInReach(map, *currentProblemStation, endProblemStation, skipList, travel, refuelable);
+		if (nullptr == SelectedProblemStation)
 		{
-			throw std::runtime_error("No Reachable ProblemStation cause tank empty");
+			return std::vector<ProblemStation*>();
 		}
 		
-		if (nullptr != SelectedProblemStation)
+		nauticmiles_t currentDistance = geometry::distance(currentProblemStation->getLocation(), SelectedProblemStation->getLocation());
+		travel->flightDistance = travel->flightDistance  + currentDistance;
+		travel->currentTime = m_dataset.departureTime + travel->flightDistance / m_dataset.planeSpeed;
+		if (!SelectedProblemStation->canBeUsedToFuel())
 		{
-			
-			nauticmiles_t currentDistance = geometry::distance(currentProblemStation->getLocation(), SelectedProblemStation->getLocation());
-			travel->flightDistance = travel->flightDistance  + currentDistance;
-			travel->currentTime = m_dataset.departureTime + travel->flightDistance / m_dataset.planeSpeed;
-			if (SelectedProblemStation->canBeUsedToFuel())
-			{
-				travel->distanceSinceLastRefuel = travel->distanceSinceLastRefuel + currentDistance;
-			}
-			else
-			{
-
-				travel->distanceSinceLastRefuel = 0;
-			}
-			float remainingFuel = m_dataset.planeFuelCapacity - travel->distanceSinceLastRefuel / m_dataset.planeSpeed * m_dataset.planeFuelUsage;
-			if (remainingFuel > 0)
-			{
-			
-				elementAdded = true;
-				firstElementAdded = true;
-				resultProblemStation.emplace_back(SelectedProblemStation);
-				skipList.emplace(skipList.begin(), SelectedProblemStation);
-
-			}
-			else
-			{
-				travel->flightDistance = travel->flightDistance - currentDistance;
-				travel->currentTime = m_dataset.departureTime + travel->flightDistance / m_dataset.planeSpeed;
-				skipList.emplace_back(SelectedProblemStation);
-				elementAdded = false;
-			}
-		}/*
+			travel->distanceSinceLastRefuel = travel->distanceSinceLastRefuel + currentDistance;
+		}
 		else
 		{
-			
-			throw std::runtime_error("No Reachable ProblemStation cause tank empty");
-		}*/
 
+			travel->distanceSinceLastRefuel = 0;
+		}
+		float remainingFuel = m_dataset.planeFuelCapacity - travel->distanceSinceLastRefuel / m_dataset.planeSpeed * m_dataset.planeFuelUsage;
+		//If the remaining fuel is superior to 0, that the selected station can be reached so we add the station to the connection vector between the 2 points in the path
+		if (remainingFuel > 0)
+		{
+		
+			elementAdded = true;
+			firstElementAdded = true;
+			//Station added to the connexion station
+			resultProblemStation.emplace_back(SelectedProblemStation);
+			skipList.emplace_back(SelectedProblemStation);
+			
+		
+
+		}
+		else
+		{
+			//If the fuel left in the plane isn't enough to cover the distance, we search for an other station that will permit us to do the route. We reset our travel variable
+			travel->flightDistance = travel->flightDistance - currentDistance;
+			travel->currentTime = m_dataset.departureTime + travel->flightDistance / m_dataset.planeSpeed;
+			if (!SelectedProblemStation->canBeUsedToFuel())
+			{
+				travel->distanceSinceLastRefuel = travel->distanceSinceLastRefuel - currentDistance;
+			}
+			skipList.emplace_back(SelectedProblemStation);
+			elementAdded = false;
+		}
+		
+		//If the element is valid, we can add it to the connexion vecor
 		if (elementAdded == true && firstElementAdded)
 		{
+			refuelable = false;
 			skipList.clear();
 			currentProblemStation = SelectedProblemStation;
 			elementAdded = false;
 			refuelable = false;
 			
 		}
-		
-		//Connect to endProblemStation [ICI]
+	
 	
 		
 
-  } while (endStation->getName() != SelectedProblemStation->getOriginalStation()->getName() && !*stopFlag);
+	} while (endStation->getName() != currentProblemStation->getOriginalStation()->getName()); // This loop is to be done until the selected station is the destination station
 	
-
+	//The last station added is always the destination station so  we need to remove it because it is already in the path
 	resultProblemStation.pop_back();
 	
 	
 	return resultProblemStation;
 }
 
+//Find the station in a path where the remaining fuel is < 0. In this situation, it means that this station cannot be reached. If there is no problematic station, the method return le number associated to the last station with corrrespond to the size of the path.
+//If there is a problematic station, this method return its index and update the travel variable.
 size_t  OptimisationSolver::findProblematicProblemStation(std::vector<const ProblemStation*> path, travel_variables* travel)
 {
 
@@ -616,7 +609,7 @@ size_t  OptimisationSolver::findProblematicProblemStation(std::vector<const Prob
 		currentDistance += flightDistance;
 		distanceSinceLastRefuel += flightDistance;
 		daytime_t currentTime = m_dataset.departureTime + currentDistance / m_dataset.planeSpeed;
-		std::cout << std::endl << "ProblemStation number " << i << "  : " << distanceSinceLastRefuel;
+		//std::cout << std::endl << "ProblemStation number " << i << "  : " << distanceSinceLastRefuel;
 		if (station->canBeUsedToFuel())
 		{
 			distanceSinceLastRefuel = 0;
@@ -630,7 +623,7 @@ size_t  OptimisationSolver::findProblematicProblemStation(std::vector<const Prob
 				travel->currentTime = currentTime;
 				return i;
 			}
-			std::cout << std::endl << "    Fuel left  " << remainingFuel << std::endl;
+			//std::cout << std::endl << "    Fuel left  " << remainingFuel << std::endl;
 		}
 		
 		
@@ -640,7 +633,7 @@ size_t  OptimisationSolver::findProblematicProblemStation(std::vector<const Prob
 }
 
 
-
+//Check if a station is in the vector
 bool tools::ProblemStationInPath(std::vector<const ProblemStation*> path, ProblemStation& station)
 {
 	for (const ProblemStation* i : path)
@@ -653,6 +646,7 @@ bool tools::ProblemStationInPath(std::vector<const ProblemStation*> path, Proble
 	return false;
 }
 
+//Check if a station is in the vector
 bool tools::ProblemStationInProblemStationVector(std::vector<ProblemStation*>stationVector, ProblemStation& station)
 {
 	if (stationVector.empty())
@@ -669,12 +663,15 @@ bool tools::ProblemStationInProblemStationVector(std::vector<ProblemStation*>sta
 	return false;
 }
 
+//Check if the end station is in the vector
 bool tools::EndProblemStationInReachableProblemStations(std::vector<ProblemStation*> stations, ProblemStation& endProblemStation)
 {
 	
 	return ProblemStationInProblemStationVector(stations,endProblemStation);
 }
 
+//Sort in the natural order a timedistance_t* vector: 
+//This function is specificly designed for a map with 4 regions or less
 std::vector<timedistance_t*> tools::SortTimeDistance(std::vector<timedistance_t*> distanceList)
 {
 	std::vector<timedistance_t> rankDistance;
@@ -743,6 +740,12 @@ std::vector<timedistance_t*> tools::SortTimeDistance(std::vector<timedistance_t*
 	return resultVector;
 }
 
+Location tools::findHalfWayCoordinates(Location start, Location end)
+{
+	return Location((start.longitude + end.longitude)/2,(start.latitude + end.latitude)/2);
+}
+
+//Test a path to seen the remaining fuel at each station on the console
 void OptimisationSolver::TestPath(std::vector<const ProblemStation*>& chemin)
 {
 	std::cout << std::endl;

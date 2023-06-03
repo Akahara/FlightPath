@@ -16,10 +16,11 @@ namespace tools
 	bool ProblemStationInProblemStationVector(std::vector<ProblemStation*>stationVector, ProblemStation& station);
 	bool EndProblemStationInReachableProblemStations(std::vector<ProblemStation*> stations,  ProblemStation& endProblemStation);
 	std::vector<timedistance_t*> SortTimeDistance(std::vector<timedistance_t*> distanceList);
+  Location findHalfWayCoordinates(Location start, Location end);
 
 }
 
-//A structure to track to track the current 
+//A structure to track necessary information during the flight
 struct travel_variables
 {
 	nauticmiles_t flightDistance =0;

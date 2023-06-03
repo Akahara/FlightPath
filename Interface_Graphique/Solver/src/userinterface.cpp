@@ -101,7 +101,7 @@ void writeStyle(std::ostream &out, const char *styleId, const char *color, const
     "\n    <Icon>"
     "\n      <href>" << iconHref << "</href>"
     "\n    </Icon>"
-    << (small ? "\n    <hotSpot x=\"32\" xunits=\"pixels\" y=\"64\" yunits=\"insetPixels\"/>" : "") <<
+    << (small ? "" : "\n    <hotSpot x=\"32\" xunits=\"pixels\" y=\"64\" yunits=\"insetPixels\"/>") <<
     "\n  </IconStyle>"
     "\n  <LabelStyle>"
     "\n    <scale>0</scale>"
@@ -118,7 +118,7 @@ void writeStyle(std::ostream &out, const char *styleId, const char *color, const
     "\n    <Icon>"
     "\n      <href>" << iconHref << "</href>"
     "\n    </Icon>"
-    << (small ? "\n    <hotSpot x=\"32\" xunits=\"pixels\" y=\"64\" yunits=\"insetPixels\"/>" : "") <<
+    << (small ? "" : "\n    <hotSpot x=\"32\" xunits=\"pixels\" y=\"64\" yunits=\"insetPixels\"/>") <<
     "\n  </IconStyle>"
     "\n  <LabelStyle>"
     "\n    <scale>1</scale>"
@@ -156,9 +156,9 @@ void writeStation(std::ostream &out, const ProblemStation &station, const char *
 
 void writeAllStationsLayer(std::ostream &out, const ProblemMap &map)
 {
-  const char *styleId = "station-icon";
+  const char *styleId = "icon-1739-0288D2-nodesc"; // mymaps encodes icon info in the style id for some reason
 
-  writeStyle(out, "ff5252ff", styleId, "https://www.gstatic.com/mapspro/images/stock/503-wht-blank_maps.png");
+  writeStyle(out, styleId, "51a7ff", "https://www.gstatic.com/mapspro/images/stock/503-wht-blank_maps.png", true);
   out <<
     "\n<Folder>"
     "\n  <name>Aérodromes</name>";
@@ -178,7 +178,7 @@ void writeProblemStationsLayer(std::ostream &out, const ProblemMap &map)
 
   out <<
     "\n<Folder>"
-    "\n  <name>A�rodromes disponibles de nuit</name>";
+    "\n  <name>Aerodromes disponibles de nuit</name>";
   for (const ProblemStation &station : map) {
     if (!station.isAccessibleAtNight())
       continue;
@@ -189,7 +189,7 @@ void writeProblemStationsLayer(std::ostream &out, const ProblemMap &map)
 
   out <<
     "\n<Folder>"
-    "\n  <name>A�rodromes avec rechargement possible</name>";
+    "\n  <name>Aerodromes avec rechargement possible</name>";
   for (const ProblemStation &station : map) {
     if (!station.canBeUsedToFuel())
       continue;
@@ -202,7 +202,7 @@ void writeProblemStationsLayer(std::ostream &out, const ProblemMap &map)
 void writePathLayer(std::ostream &out, const ProblemPath &path, const char *layerName)
 {
   const char *pathStyle = "path-path";
-  const char *pathIconStyle = "path-icon";
+  const char *pathIconStyle = "icon-1739-0288D1-nodesc"; // mymaps encodes icon info in the style id for some reason
   const char *pathFlagStyle = "path-flag";
   writeStyle(out, pathStyle, "ff5252ff", "https://www.gstatic.com/mapspro/images/stock/503-wht-blank_maps.png", true);
   writeStyle(out, pathIconStyle, "ff5252ff", "https://www.gstatic.com/mapspro/images/stock/503-wht-blank_maps.png", true);
