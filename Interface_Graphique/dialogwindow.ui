@@ -100,7 +100,7 @@
      <x>43</x>
      <y>48</y>
      <width>301</width>
-     <height>161</height>
+     <height>171</height>
     </rect>
    </property>
    <layout class="QVBoxLayout" name="verticalLayout_2">
@@ -127,7 +127,7 @@
       <property name="sizeHint" stdset="0">
        <size>
         <width>20</width>
-        <height>100</height>
+        <height>40</height>
        </size>
       </property>
      </spacer>
@@ -177,8 +177,8 @@
       </property>
       <property name="sizeHint" stdset="0">
        <size>
-        <width>20</width>
-        <height>40</height>
+        <width>0</width>
+        <height>60</height>
        </size>
       </property>
      </spacer>
