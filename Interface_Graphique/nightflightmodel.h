@@ -70,7 +70,7 @@ public:
     }
 
     bool isAccessibleAtNight(const Station &station) {
-        return m_statuses[station.getFuel()];
+        return m_statuses[station.getNightVFR()];
     }
 
     QMap<std::string, bool> &getStatuses() { return m_statuses; }
