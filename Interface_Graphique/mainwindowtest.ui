@@ -10,6 +10,18 @@
     <height>926</height>
    </rect>
   </property>
+  <property name="sizePolicy">
+   <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
+    <horstretch>0</horstretch>
+    <verstretch>0</verstretch>
+   </sizepolicy>
+  </property>
+  <property name="minimumSize">
+   <size>
+    <width>1000</width>
+    <height>0</height>
+   </size>
+  </property>
   <property name="windowTitle">
    <string>FlightPath</string>
   </property>
@@ -105,7 +117,7 @@
              </size>
             </property>
             <property name="text">
-             <string>Algorithme de résolution :</string>
+             <string>Algorithme de résolution (?):</string>
             </property>
            </widget>
           </item>
@@ -461,7 +473,7 @@
              <string>Algorithme appliqué après avoir trouvé une solution, augmente le temps de résolution</string>
             </property>
             <property name="text">
-             <string>Algorithme d'optimisation : </string>
+             <string>Algorithme d'optimisation (?): </string>
             </property>
            </widget>
           </item>
@@ -514,7 +526,7 @@
              <string>Accélère le calcul en utilisant d'avantage de ressources de l'ordinateur</string>
             </property>
             <property name="text">
-             <string>Nombre de threads :</string>
+             <string>Nombre de threads (?):</string>
             </property>
            </widget>
           </item>
@@ -978,8 +990,11 @@
             <layout class="QVBoxLayout" name="essenceView">
              <item>
               <widget class="QLabel" name="essenceViewLabel">
+               <property name="toolTip">
+                <string>Les catégories cochées peuvent être utilisées pour recharger l'avion en carburant</string>
+               </property>
                <property name="text">
-                <string>Essence :</string>
+                <string>Essence (?):</string>
                </property>
               </widget>
              </item>
@@ -1025,15 +1040,18 @@
                  <verstretch>0</verstretch>
                 </sizepolicy>
                </property>
+               <property name="toolTip">
+                <string>Les aérodromes des catégories non cochées sont exclus</string>
+               </property>
                <property name="text">
-                <string>Statut :</string>
+                <string>Statut (?):</string>
                </property>
               </widget>
              </item>
              <item>
               <widget class="QTableView" name="StatutViewTable">
                <property name="sizePolicy">
-                <sizepolicy hsizetype="Expanding" vsizetype="Preferred">
+                <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
                  <horstretch>0</horstretch>
                  <verstretch>0</verstretch>
                 </sizepolicy>
@@ -1066,8 +1084,11 @@
              </property>
              <item>
               <widget class="QLabel" name="label_34">
+               <property name="toolTip">
+                <string>Les aérodromes des catégories cochées sont accessibles de nuit</string>
+               </property>
                <property name="text">
-                <string>VFR nuit :</string>
+                <string>VFR nuit (?):</string>
                </property>
               </widget>
              </item>

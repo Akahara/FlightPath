@@ -6,7 +6,7 @@
 #include <thread>
 #include <memory>
 #include <QFileDialog>
-
+#include <QMessageBox>
 #include "Solver/src/pathsolver.h"
 #include "Solver/src/tsp/tsp_nearest_multistart_opt.h"
 #include "Solver/src/breitling/breitlingnatural.h"
@@ -95,15 +95,20 @@ void MainWindowTest::updateGeoMapFromFile()
 
     GeoMap geoMap;
 
-    if (filePath.endsWith(".xls") || filePath.endsWith(".xlsx")) {
-        XLSSerializer serializer;
-        geoMap = serializer.parseMap(filePath.toStdString());
-    } else if (filePath.endsWith(".csv")) {
-        CSVSerializer serializer;
-        geoMap = serializer.parseMap(filePath.toStdString());
-    } else {
-      // unreachable
-      assert(false);
+    try {
+        if (filePath.endsWith(".xls") || filePath.endsWith(".xlsx")) {
+            XLSSerializer serializer;
+            geoMap = serializer.parseMap(filePath.toStdString());
+        } else if (filePath.endsWith(".csv")) {
+            CSVSerializer serializer;
+            geoMap = serializer.parseMap(filePath.toStdString());
+        } else {
+          // unreachable
+          assert(false);
+        }
+    } catch (const std::runtime_error &e) {
+        QMessageBox::warning(this, "Impossible de lire le fichier", e.what());
+        return;
     }
 
     QList<Station> stations;
@@ -208,8 +213,11 @@ void MainWindowTest::repopulateFilterMap(QMap<std::string, bool> &filterMap, Att
 
     // add entries for new values (default to true, ie. do not remove when filtering)
     for (const Station &s : m_excelModel.getStations()) {
-        if(!filterMap.contains(getter(s)))
-            filterMap[getter(s)] = true;
+        std::string clazz = getter(s);
+        if(!filterMap.contains(clazz)) {
+            bool defaultValue = clazz != "non";
+            filterMap[clazz] = defaultValue;
+        }
     }
 }
 

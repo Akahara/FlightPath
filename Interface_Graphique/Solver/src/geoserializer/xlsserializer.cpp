@@ -33,6 +33,9 @@ GeoMap XLSSerializer::parseMap(const std::filesystem::path& file) const
             nightVFR = worksheet.cell(row, NIGHT_VFR_COLUMN).value().get<std::string>();
             fuel = worksheet.cell(row, FUEL_COLUMN).value().get<std::string>();
 
+            if(OACI == "")
+                break;
+
             // Create a Location from the coordinates
             Location location = Location::fromNECoordinates(string2coordinate(lat), string2coordinate(lon));
 
