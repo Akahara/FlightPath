@@ -61,6 +61,7 @@ void TspNearestMultistartOptSolver::solveMultiStartThread(const ProblemMap &map,
         }
         leftStations.pop_back();
         runtime->currentProgress = 1 - (float)leftStations.size() / (float)map.size();
+        runtime->foundSolutionCount = 1;
         mutex.unlock();
 
         // Compute the distance matrix
