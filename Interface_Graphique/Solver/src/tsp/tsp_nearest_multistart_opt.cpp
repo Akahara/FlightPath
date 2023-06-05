@@ -208,9 +208,10 @@ ProblemPath TspNearestMultistartOptSolver::nearestNeighborPath(const ProblemMap 
         for (const ProblemStation* const station : remainingStations) {
 
             // Find the distance between the last station in path and the current station
-            const int index1 = std::find(map.begin(), map.end(), path.back()) - map.begin();
-            const int index2 = std::find(map.begin(), map.end(), *station) - map.begin();
-            const nauticmiles_t distance = (*distances)[index1][index2];
+            //const int index1 = std::find(map.begin(), map.end(), path.back()) - map.begin();
+            //const int index2 = std::find(map.begin(), map.end(), *station) - map.begin();
+            //const nauticmiles_t distance = (*distances)[index1][index2];
+            const nauticmiles_t distance = geometry::distance(path.back().getLocation(), station->getLocation());
 
             // Update the nearest station
             if (distance < minDistance) {

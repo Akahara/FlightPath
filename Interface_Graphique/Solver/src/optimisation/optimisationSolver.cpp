@@ -329,7 +329,7 @@ ProblemStation* OptimisationSolver::stationSelectionInReach(const ProblemMap& ma
 	//Iterate for each station in the reachable station to find witch station has the best closest to destinationProblemStation/farthest to startProblemStation ration. 
 	ProblemStation* SelectedProblemStation{};
 	bool ElementInPath = false;
-	timedistance_t ratio = DBL_MAX;
+    timedistance_t ratio = std::numeric_limits<timedistance_t>::max();
 	std::vector<ProblemStation> reachableProblemStations{};
 	Station* destinationStation = (Station*)destinationProblemStation.getOriginalStation();
 	timedistance_t calculatedRatio;

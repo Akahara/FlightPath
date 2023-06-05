@@ -19,6 +19,7 @@
 #include <map>
 #include <unordered_map>
 #include <fstream>
+#include <bit>
 
 #include "../geometry.h"
 #include "breitlingnatural.h"

@@ -125,6 +125,8 @@ void MainWindowTest::updateFieldsVisibility() {
     ui->optWidget->setVisible(index == TSP_INDEX);
     ui->threadWidget->setVisible(index == TSP_INDEX);
     ui->breitlingSolverSelection->setVisible(index == BREITLING_INDEX);
+    ui->EssenceViewWidget->setEnabled(index == BREITLING_INDEX);
+    ui->VFRViewWidget->setEnabled(index == BREITLING_INDEX);
     if(index == BREITLING_INDEX)
         ui->arriveeBoxWidget->setEnabled(true);
     checkDepArrBoucleValidity();

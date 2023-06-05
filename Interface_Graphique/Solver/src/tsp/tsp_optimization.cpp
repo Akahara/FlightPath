@@ -87,7 +87,7 @@ namespace tsp_optimization {
      * The map is used to know how to read the distances matrix.
      *
      * WARNING : This algorithm can take a long time to compute.
-     * You can limit the time by passing a pointer to a boolean that you can set to true to stop the algorithm (in another thread for example).
+     * You can limit the time by passing a pointer to a boolean that you can set to true to stop the algorithm (in another thread).
      */
     ProblemPath o3opt(const ProblemPath &path, const ProblemMap &map, std::vector<std::vector<nauticmiles_t>> *distances,
                       bool *stop) {

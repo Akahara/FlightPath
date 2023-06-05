@@ -66,6 +66,7 @@ HEADERS += \
     Solver/src/tsp/genetictsp.h \
     Solver/src/tsp/tsp_nearest_multistart_opt.h \
     Solver/src/tsp/tsp_optimization.h \
+    Solver/src/optimisation/optimisationSolver.h \
     Solver/src/userinterface.h \
     Solver/vendor/OpenXLSX/OpenXLSX.hpp \
     Solver/vendor/OpenXLSX/external/nowide/nowide/args.hpp \

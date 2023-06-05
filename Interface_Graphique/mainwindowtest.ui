@@ -7,7 +7,7 @@
     <x>0</x>
     <y>0</y>
     <width>1094</width>
-    <height>823</height>
+    <height>926</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -19,9 +19,15 @@
      <widget class="QGroupBox" name="leftPanel">
       <property name="sizePolicy">
        <sizepolicy hsizetype="Fixed" vsizetype="Expanding">
-        <horstretch>10</horstretch>
+        <horstretch>0</horstretch>
         <verstretch>0</verstretch>
        </sizepolicy>
+      </property>
+      <property name="maximumSize">
+       <size>
+        <width>16777215</width>
+        <height>16777215</height>
+       </size>
       </property>
       <property name="styleSheet">
        <string notr="true"/>
@@ -956,7 +962,7 @@
            <number>1</number>
           </property>
           <item>
-           <widget class="QWidget" name="widget" native="true">
+           <widget class="QWidget" name="EssenceViewWidget" native="true">
             <property name="sizePolicy">
              <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
               <horstretch>0</horstretch>
@@ -994,9 +1000,9 @@
            </widget>
           </item>
           <item>
-           <widget class="QWidget" name="verticalWidget" native="true">
+           <widget class="QWidget" name="StatutViewWidget" native="true">
             <property name="sizePolicy">
-             <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
+             <sizepolicy hsizetype="Expanding" vsizetype="Preferred">
               <horstretch>0</horstretch>
               <verstretch>0</verstretch>
              </sizepolicy>
@@ -1013,6 +1019,12 @@
              </property>
              <item>
               <widget class="QLabel" name="label_12">
+               <property name="sizePolicy">
+                <sizepolicy hsizetype="Expanding" vsizetype="Preferred">
+                 <horstretch>0</horstretch>
+                 <verstretch>0</verstretch>
+                </sizepolicy>
+               </property>
                <property name="text">
                 <string>Statut :</string>
                </property>
@@ -1021,7 +1033,7 @@
              <item>
               <widget class="QTableView" name="StatutViewTable">
                <property name="sizePolicy">
-                <sizepolicy hsizetype="Preferred" vsizetype="Expanding">
+                <sizepolicy hsizetype="Expanding" vsizetype="Preferred">
                  <horstretch>0</horstretch>
                  <verstretch>0</verstretch>
                 </sizepolicy>
@@ -1035,7 +1047,7 @@
            </widget>
           </item>
           <item>
-           <widget class="QWidget" name="VFRView_2" native="true">
+           <widget class="QWidget" name="VFRViewWidget" native="true">
             <property name="sizePolicy">
              <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
               <horstretch>0</horstretch>
@@ -1103,7 +1115,7 @@
      <x>0</x>
      <y>0</y>
      <width>1094</width>
-     <height>21</height>
+     <height>22</height>
     </rect>
    </property>
    <widget class="QMenu" name="menuFichier">
