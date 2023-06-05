@@ -4,5 +4,5 @@
 
 class GeneticTSPSolver : public PathSolver {
 public:
-    virtual Path solveForPath(const GeoMap &map) override;
+    virtual ProblemPath solveForPath(const ProblemMap &map, bool *stopFlag=nullptr) override;
 };

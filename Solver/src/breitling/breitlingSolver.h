@@ -6,9 +6,10 @@
 // Unless otherwise specified, methods should respond well to values in range 0..inf
 typedef float daytime_t;
 
-// to be renamed
 // All daytime fields in this struct should be in the 0..24 range
 struct BreitlingData {
+    static constexpr size_t NO_TARGET_STATION = -1; // value of targetStation if none is required
+
     nauticmiles_t planeSpeed;    // nautic miles per hour
     daytime_t nauticalDaytime;   // sunrise time (<nauticalNighttime)
     daytime_t nauticalNighttime; // sunset time (>nauticalDaytime)
@@ -16,8 +17,8 @@ struct BreitlingData {
     double planeFuelCapacity;    // the fuel capacity of the plane, unit must match planeFuelUsage
     double planeFuelUsage;       // the speed at which fuel is consumed, per hour, fuel unit must match planeFuelCapacity
     daytime_t timeToRefuel;      // the time it takes for the plane to refuel
-    const Station *departureStation;
-    const Station *targetStation;
+    size_t departureStation;
+    size_t targetStation;
 };
 
 namespace breitling_constraints {
@@ -33,43 +34,30 @@ constexpr size_t MANDATORY_REGION_COUNT = 4;
 // The Breitling cup specifies 4 regions to pass through, meaning a path must cross
 // at least one station in each region. Regions are delimited by longitude/latitude lines
 // regions are ordered counter counter clockwise, starting from NE
-bool isStationInMandatoryRegion(const Station &station, unsigned char region);
+bool isStationInMandatoryRegion(const Station &station, size_t region);
+// returns the station's region, or -1 if it is not in any region
+size_t getStationRegion(const Station &station);
 
 // the path must go through 4 stations, one for each cardinal direction
-bool satisfiesRegionsConstraints(const Path &path);
+bool satisfiesRegionsConstraints(const ProblemPath &path);
 // the path must go through a set number of stations
-bool satisfiesStationCountConstraints(const Path &path);
+bool satisfiesStationCountConstraints(const ProblemPath &path);
 // the path must start and end at set cities
-bool satisfiesPathConstraints(const BreitlingData &dataset, const Path &path);
+bool satisfiesPathConstraints(const ProblemMap &map, const BreitlingData &dataset, const ProblemPath &path);
 // the path must allow the plane to not go out of fuel, it is assumed that the plane fuels up at *every* station when possible
-bool satisfiesFuelConstraints(const BreitlingData &dataset, const Path &path);
+bool satisfiesFuelConstraints(const BreitlingData &dataset, const ProblemPath &path);
 // the whole path must not take too long
-bool satisfiesTimeConstraints(const BreitlingData &dataset, const Path &path);
+bool satisfiesTimeConstraints(const BreitlingData &dataset, const ProblemPath &path);
 
 // check all satisfiesXXConstraints, users may want to check time constraints separately because
 // slow planes simply cannot go through the set number of stations in due time
-inline bool isPathValid(const BreitlingData &dataset, const Path &path)
+inline bool isPathValid(const ProblemMap &map, const BreitlingData &dataset, const ProblemPath &path)
 {
     return satisfiesRegionsConstraints(path) &&
         satisfiesStationCountConstraints(path) &&
-        satisfiesPathConstraints(dataset, path) &&
+        satisfiesPathConstraints(map, dataset, path) &&
         satisfiesFuelConstraints(dataset, path) &&
         satisfiesTimeConstraints(dataset, path);
 }
 
-// a plane can refuel at a station at daytime or during nighttime if the station allows it
-bool canBeUsedToFuel(const BreitlingData &dataset, const Station &station, daytime_t daytime);
-
 }
-
-class BreitlingSolver : public PathSolver {
-private:
-    BreitlingData m_dataset;
-public:
-    BreitlingSolver(const BreitlingData &dataset)
-        : m_dataset(dataset)
-    {
-    }
-
-    virtual Path solveForPath(const GeoMap &map) override;
-};

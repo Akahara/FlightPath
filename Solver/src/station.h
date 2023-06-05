@@ -1,6 +1,9 @@
 #pragma once
 
+#include <string>
+
 #include "geography.h"
+#include <string>
 
 class Station {
 private:

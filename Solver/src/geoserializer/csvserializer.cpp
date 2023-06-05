@@ -9,39 +9,38 @@ GeoMap CSVSerializer::parseMap(const std::filesystem::path &file) const
     std::vector<std::string> row;
     std::string infoLine, word;
 
-    //Ouverture du fichier csv
+    // Open the file
     std::ifstream csvFile;
     csvFile.open(file, std::ios_base::in);
     if (!csvFile.is_open())
     {
-        std::cout << "error";
-        return GeoMap();
+        throw std::runtime_error("Error while opening the file \"" + file.string() + "\"");
     }
 
-    //On vide entièrement les vectors
+    // Clear the vectors
     row.clear();
     content.clear();
 
-    //Sauter la première ligne : cette ligne contient seulement l'entête des données
+    // Skip the header
     getline(csvFile, infoLine);
 
-    //Recuperation des donn�es sous forme de vectors:  
+    // Fill the vectors with the content of the file
     while (std::getline(csvFile, infoLine))
     {
         std::stringstream sLine(infoLine);
         row.clear();
 
-        //On sépare chaque ligne grace au séparateur ";"
+        // Split the line with the delimiter ';'
         while (std::getline(sLine, word, ';'))
         {
             row.push_back(word);
 
         }
-        //On ajoute le vector row au vector content
+        // Add the row vector to the content vector
         content.push_back(row);
     }
     
-    //Création des stations a partir des locations
+    // Create the stations
     for (int i = 0; i < content.size(); i++)
     {
         if (content[i][EXCLUDE_COLUMN-1].empty())
@@ -60,10 +59,23 @@ GeoMap CSVSerializer::parseMap(const std::filesystem::path &file) const
                 fuel.pop_back(); // remove the last character (\r)
             }
 
-            Location location {string2coordinate(lon), string2coordinate(lat)};
+            double lat_value, lon_value;
+
+            try {
+                lat_value = string2coordinate(lat);
+                lon_value = string2coordinate(lon);
+            } catch (std::exception &e) {
+                throw std::runtime_error("Error while parsing the file \""
+                                         + file.string()
+                                         + "\" at row "
+                                         + std::to_string(i + 2)
+                                         + ": " + e.what());
+            }
+
+            Location location{ lon_value, lat_value };
             Station station (location, name, OACI, status, nightVFR, fuel);
 
-            //On ajoute ses stations dans le GeoMap résultat
+            // Add the station to the map
             resultat.getStations().emplace_back(station);
         }
     }
@@ -78,11 +90,10 @@ void CSVSerializer::writePath(const std::filesystem::path &file, const Path &pat
 
     if (!csvFile.is_open())
     {
-        std::cout << "error";
-        throw std::runtime_error("Erreur ouverture");
+        throw std::runtime_error("Error while opening the file \"" + file.string() + "\"");
     }
 
-    for (Station *i : path.getStations())
+    for (const Station *i : path.getStations())
     {
         csvFile << i->getOACI() << ";";
         csvFile << i->getName() << ";";

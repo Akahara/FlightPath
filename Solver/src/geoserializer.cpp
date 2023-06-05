@@ -3,9 +3,9 @@
 double GeoSerializer::string2coordinate(const std::string &str)
 {
     // check if string is valid
-    if (!std::regex_match(str, std::regex("^[0-9]{1,3}:[0-9]{1,2}.[0-9]*[NSWE]$")))
+    if (!std::regex_match(str, std::regex("^[0-9]{1,3}:[0-9]{1,2}\\.[0-9]*[NSWE]$")))
     {
-        throw std::runtime_error("Invalid coordinate string (" + str + ")");
+        throw std::invalid_argument("Invalid coordinate string (" + str + ")");
     }
 
     // split string into degrees, minutes and direction  (example: 52:30.12N)
@@ -18,7 +18,7 @@ double GeoSerializer::string2coordinate(const std::string &str)
     double result = std::stod(degrees) + std::stod(minutes) / 60;
 
     // change sign to keep a consistent coordinate system
-    if (direction == "W" | direction == "O" | direction == "S")
+    if (direction == "W" || direction == "O" || direction == "S")
     {
         result = -result;
     }

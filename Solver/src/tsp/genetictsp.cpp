@@ -26,7 +26,7 @@ constexpr GeneticParameters defaultGeneticParams()
 template<typename Individual>
 class Genetics {
 protected:
-    std::mt19937 random{rand()}; // accessible to sub-classes
+    std::mt19937 random{static_cast<std::bernoulli_distribution::result_type>(rand())}; // accessible to sub-classes
 public:
     typedef float score_t;
 
@@ -34,7 +34,7 @@ public:
     virtual score_t scoreIndividual(const Individual &ind) = 0;
     virtual Individual mutateIndividual(const Individual &parent) = 0;
 
-    Individual runEvolution(const GeneticParameters &params=defaultGeneticParams())
+    Individual runEvolution(bool *stopFlag=nullptr, const GeneticParameters &params=defaultGeneticParams())
     {
         assert(params.keptIndividualCount < params.generationSize);
         assert(params.keptIndividualCount > 0);
@@ -45,7 +45,7 @@ public:
 
         genRandomIndividuals(individuals);
         
-        for (size_t i = 0; i < params.generationCount; i++) {
+        for (size_t i = 0; i < params.generationCount && (stopFlag==nullptr || !*stopFlag); i++) {
             // score individuals
             for (size_t j = 0; j < individuals.size(); j++)
                 scores[j] = { scoreIndividual(individuals[j]), j };
@@ -77,54 +77,54 @@ public:
     }
 };
 
-class TSPGenetics : public Genetics<Path> {
+class TSPGenetics : public Genetics<ProblemPath> {
 private:
-    const std::vector<Station> *m_availableStations;
+    const std::vector<ProblemStation> *m_availableStations;
 public:
-    TSPGenetics(const GeoMap &map)
-        : m_availableStations(&map.getStations())
+    TSPGenetics(const ProblemMap &map)
+        : m_availableStations(&map)
     {
     }
 
-    void genRandomIndividuals(std::vector<Path> &individuals) override
+    void genRandomIndividuals(std::vector<ProblemPath> &individuals) override
     {
         std::generate(individuals.begin(), individuals.end(), [this]() {
             std::vector<size_t> indices( m_availableStations->size() );
             std::iota(indices.begin(), indices.end(), 0);
             std::shuffle(indices.begin(), indices.end(), random);
-            Path path;
-            path.getStations().reserve(m_availableStations->size());
+            ProblemPath path;
+            path.reserve(m_availableStations->size());
             for (size_t i = 0; i < indices.size(); i++)
-                path.getStations().push_back(&m_availableStations->at(indices[i]));
+                path.push_back(m_availableStations->at(indices[i]));
             return path;
         });
     }
 
-    score_t scoreIndividual(const Path &ind) override
+    score_t scoreIndividual(const ProblemPath &ind) override
     {
-        return -ind.length()-geometry::distance(ind[0].getLocation(), ind[ind.size() - 1].getLocation());
+        return -getLength(ind)-geometry::distance(ind[0].getLocation(), ind[ind.size() - 1].getLocation());
     }
 
-    Path mutateIndividual(const Path &parent) override
+    ProblemPath mutateIndividual(const ProblemPath &parent) override
     {
         int swapCount = 1 + random() % 3;
 
-        Path child{ parent };
+        ProblemPath child{ parent };
 
         for (size_t i = 0; i < swapCount; i++) {
             size_t s1 = random() % m_availableStations->size();
             size_t s2;
             do { s2 = random() % m_availableStations->size(); } while (s1 == s2);
 
-            std::swap(child.getStations()[s1], child.getStations()[s2]);
+            std::swap(child[s1], child[s2]);
         }
 
         return child;
     }
 };
 
-Path GeneticTSPSolver::solveForPath(const GeoMap &map)
+ProblemPath GeneticTSPSolver::solveForPath(const ProblemMap &map, bool *stopFlag)
 {
     TSPGenetics genetics{ map };
-    return genetics.runEvolution();
+    return genetics.runEvolution(stopFlag);
 }

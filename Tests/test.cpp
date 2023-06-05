@@ -5,13 +5,12 @@
 
 #include "../Solver/src/geomap.h"
 #include "../Solver/src/geometry.h"
-#include "../Solver/src/tsp/TspSolver.h"
 #include "../Solver/src/tsp/genetictsp.h"
-#include "../Solver/src/breitling/BreitlingSolver.h"
+#include "../Solver/src/breitling/breitlingSolver.h"
 
 TEST(TestLocationCase, TestConstructors)
 {
-    Location l1{ 1, -2 };  // lon=-2 lat=+1   lon=2°S lat=1°N
+    Location l1{ 1, -2 };  // lon=-2 lat=+1   lon=2ï¿½S lat=1ï¿½N
     Location l2{ 1.5, 0 }; // lon=0  lat=
     EXPECT_EQ(l1, Location::fromNECoordinates(-2, +1));
     EXPECT_EQ(l1, Location::fromNECoordinates(+2, +1, Card::SE));
