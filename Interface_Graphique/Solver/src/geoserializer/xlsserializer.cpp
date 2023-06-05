@@ -55,8 +55,6 @@ GeoMap XLSSerializer::parseMap(const std::filesystem::path& file) const
 
 void XLSSerializer::writePath(const std::filesystem::path& file, const Path& path) const
 {
-    // TODO : Create a specific directory for the model file
-
     // Delete the file if it already exists
     if (std::filesystem::exists("FicheDeNavigation.xlsx"))
     {
@@ -64,7 +62,6 @@ void XLSSerializer::writePath(const std::filesystem::path& file, const Path& pat
     }
 
     // Copy the template file
-    QFile modelfile(":/resources/resources/FicheDeNavigationModel.xlsx");
     QFile::copy(":/resources/resources/FicheDeNavigationModel.xlsx", QString::fromStdString(file.string()));
 
     // Open the file

@@ -14,6 +14,7 @@ struct SolverExecutionState {
     SolverRuntime *solverRuntime;
     ProblemPath   *finalPath; // must not be read until the solver finished running
     bool           finishedExecution = false;
+    bool           isTspInstance = false;
 };
 
 class DialogWindow : public QDialog

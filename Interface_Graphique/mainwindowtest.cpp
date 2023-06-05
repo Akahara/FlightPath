@@ -288,6 +288,7 @@ void MainWindowTest::runSolver() {
           const ProblemStation *startStation = departureStation == -1 ? nullptr : &(*problemMap)[departureStation];
           const ProblemStation *endStation = targetStation == -1 ? nullptr : &(*problemMap)[targetStation];
           solver = std::make_unique<TspNearestMultistartOptSolver>(nbThread, optAlgo, loop, startStation, endStation);
+          state.isTspInstance = true;
       } else {
           BreitlingData dataset;
           dataset.departureTime = controlsToDaytime(ui->depH, ui->depM);

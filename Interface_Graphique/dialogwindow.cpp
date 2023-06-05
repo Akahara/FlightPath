@@ -72,7 +72,7 @@ void DialogWindow::onSolverFinished() {
 }
 
 void DialogWindow::saveFlightMapToFile() {
-    QString filePath = QFileDialog::getSaveFileName(this, "Choisir une destination", QString(), "( *.xlsx *.xls *.csv)");
+    QString filePath = QFileDialog::getSaveFileName(this, "Choisir une destination", QString(), "(*.xlsx *.xls *.csv)");
     if (filePath.isEmpty())
         return;
 
@@ -97,7 +97,8 @@ void DialogWindow::saveMapToFile() {
 
     kml_export::writeHeader(outFile);
     kml_export::writeAllStationsLayer(outFile, *m_solverState->originalMap);
-    kml_export::writeProblemStationsLayer(outFile, *m_solverState->originalMap); // TODO do not write problem stations for TSP
+    if(!m_solverState->isTspInstance)
+        kml_export::writeProblemStationsLayer(outFile, *m_solverState->originalMap);
     kml_export::writePathLayer(outFile, *m_solverState->finalPath, "Chemin");
     kml_export::writeFooter(outFile);
 }
