@@ -14,7 +14,9 @@ out/
 cmake-build-debug/
 cmake-build-debug-coverage/
 cmake-build-release/
+build-*
 out/
 *.kml
 *.odt
+*.user*
 screens/
