@@ -841,7 +841,7 @@ private:
     bool shouldExploreNoRefuel = true;
     bool shouldExploreWithRefuel = nextStation.canBeUsedToFuel();
 
-    if (m_dataset->timeToRefuel == 0 && nextStation.canBeUsedToFuel()) // if the time to refuel is 0 refuel every time it is possible
+    if (m_dataset->timeToRefuel == 0 && nextStation.canBeUsedToFuel()) // if the time to refuel is 0 refuel every time if possible
       shouldExploreNoRefuel = false;
 
     if (!shouldExploreNoRefuel && !shouldExploreWithRefuel)

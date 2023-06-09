@@ -46,7 +46,6 @@ SOURCES += \
     dialogwindow.cpp \
     excelhelper.cpp \
     main.cpp \
-    mainwindow.cpp \
     mainwindowtest.cpp
 
 HEADERS += \
@@ -120,7 +119,6 @@ HEADERS += \
     dialogwindow.h \
     excelhelper.h \
     fuelmodel.h \
-    mainwindow.h \
     mainwindowtest.h \
     nightflightmodel.h \
     stationmodel.h \
@@ -128,7 +126,6 @@ HEADERS += \
 
 FORMS += \
     dialogwindow.ui \
-    mainwindow.ui \
     mainwindowtest.ui
 
 # Default rules for deployment.

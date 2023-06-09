@@ -300,8 +300,8 @@ void MainWindowTest::runSolver() {
       } else {
           BreitlingData dataset;
           dataset.departureTime = controlsToDaytime(ui->depH, ui->depM);
-          dataset.nauticalDaytime = controlsToDaytime(ui->couH, ui->couM);
-          dataset.nauticalNighttime = controlsToDaytime(ui->levH, ui->levM);
+          dataset.nauticalDaytime = controlsToDaytime(ui->levH, ui->levM);
+          dataset.nauticalNighttime = controlsToDaytime(ui->couH, ui->couM);
           dataset.planeFuelCapacity = ui->capacite->value();
           dataset.planeFuelUsage = ui->consommation->value();
           dataset.planeSpeed = ui->vitesse->value();
