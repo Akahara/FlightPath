@@ -3,11 +3,16 @@
 #define NUMBER_REGION 4
 #define FUEL_SECURITY_PERCENTAGE 0.25
 
+
 #include <map>
 #include <iostream>
 #include <list>
 #include <algorithm>    
 #include <limits>
+#include <iostream>
+#include <random>
+#include <chrono>
+#include <thread>
 #include "../userinterface.h"
 
 
@@ -68,10 +73,20 @@ std::vector<ProblemMap*> OptimisationSolver::seperateRegion(const ProblemMap& ma
 */
 void OptimisationSolver::initializePath(const std::vector<ProblemMap*> regions, ProblemStation* startingProblemStation, ProblemStation* endProblemStation)
 {
-	chemin.clear();
+	m_chemin.clear();
 	srand((unsigned)time(NULL));
-	chemin.emplace_back(startingProblemStation);
+	std::random_device rd;
+	std::mt19937 gen(rd());
+	std::uniform_int_distribution<> distributionRegion0(0, regions[0]->size()-1);
+	std::uniform_int_distribution<> distributionRegion1(0, regions[1]->size()-1);
+	std::uniform_int_distribution<> distributionRegion2(0, regions[2]->size()-1);
+	std::uniform_int_distribution<> distributionRegion3(0, regions[3]->size()-1);
+	m_chemin.emplace_back(startingProblemStation);
 
+	if (!startingProblemStation->isAccessibleAtNight() && tools::isTimeInNightPeriod(m_dataset.departureTime, m_dataset))
+	{
+		throw std::runtime_error("Departure is done in the night on a station that isn't accessible at night");
+	}
 
 
 	int regionOfStartStation = 0;
@@ -93,14 +108,14 @@ void OptimisationSolver::initializePath(const std::vector<ProblemMap*> regions, 
 		}
 	}
 
-	std::cout << "Region of Start Station : " << regionOfStartStation << "Region of end station: " << regionOfEndStation << std::endl;
+
 
 	//We select a random station from each region
 	
-	northEastProblemStation = new ProblemStation(regions[0]->at(rand() % regions[0]->size()));
-	northWestProblemStation = new ProblemStation((regions[1]->at(rand() % regions[1]->size())));
-	southEastProblemStation = new ProblemStation((regions[2]->at(rand() % regions[2]->size())));
-	southWestProblemStation = new ProblemStation((regions[3]->at(rand() % regions[3]->size())));
+	northEastProblemStation = new ProblemStation(regions[0]->at(distributionRegion0(gen)));
+	northWestProblemStation = new ProblemStation((regions[1]->at(distributionRegion1(gen))));
+	southEastProblemStation = new ProblemStation((regions[2]->at(distributionRegion2(gen))));
+	southWestProblemStation = new ProblemStation((regions[3]->at(distributionRegion3(gen))));
 
 	//Creation of a distance variable for each station
 	timedistance_t * neDistance = new timedistance_t( geometry::distance(startingProblemStation->getLocation(), northEastProblemStation->getLocation()));
@@ -138,11 +153,11 @@ void OptimisationSolver::initializePath(const std::vector<ProblemMap*> regions, 
 	distanceVector.emplace_back(nwDistance);
 
 	//If the end problem station is already in a region, we do not have to add a random station in that specific region 
-	if (regionOfEndStation > 0)
+	/*/if (regionOfEndStation > 0)
 	{
 		auto it = std::find(distanceVector.begin(), distanceVector.end(), orderStation[regionOfEndStation]);
 		distanceVector.erase(it);
-	}
+	}*/
 	
 	////We find the closest station to the last station added to the path
 	while (!distanceVector.empty())
@@ -162,7 +177,7 @@ void OptimisationSolver::initializePath(const std::vector<ProblemMap*> regions, 
 		//If the end station is a part of the region, we do not add it during the sorting but at the end
 		if (endProblemStation->getOriginalStation()->getName() != distanceProblemStation[distanceVector.front()]->getOriginalStation()->getName())
 		{
-			chemin.emplace_back(distanceProblemStation[distanceVector.front()]);
+			m_chemin.emplace_back(distanceProblemStation[distanceVector.front()]);
 		}
 		
 		/*std::cout << "The name of the addded station" << closestProblemStation->getName() << std::endl;*/
@@ -176,95 +191,133 @@ void OptimisationSolver::initializePath(const std::vector<ProblemMap*> regions, 
 
 	}
 	
-	chemin.emplace_back(endProblemStation);
+	m_chemin.emplace_back(endProblemStation);
+
+
 
 }
 
-static ProblemPath adaptProblemPath(const std::vector<const ProblemStation *> &path) {
-    ProblemPath adapted;
-    adapted.reserve(path.size());
-    for(const ProblemStation *s : path)
-        adapted.push_back(*s);
-    return adapted;
+ProblemPath OptimisationSolver::adaptProblemPath(const std::vector<const ProblemStation*>& path)
+{
+	ProblemPath adapted;
+	adapted.reserve(path.size());
+	for (const ProblemStation* s : path)
+		adapted.push_back(*s);
+	return adapted;
 }
 
-ProblemPath OptimisationSolver::solveForPath(const ProblemMap& map, SolverRuntime *runtime)
+ProblemPath OptimisationSolver::solveForPath(const ProblemMap& map, SolverRuntime* runtime)
 {
 	srand((unsigned)time(NULL));
 	bool doablePath = false;
 	bool pathLongEnough = false;
+	bool validPath; 
 	std::vector<ProblemStation*> skipList{};
+	std::vector<const ProblemStation*> *comparePath = new std::vector<const ProblemStation*>;
 	ProblemStation startingProblemStation = map[m_dataset.departureStation];
 	ProblemStation endProblemStation = map[m_dataset.targetStation];
+	ProblemPath currentSolution{}, bestSolution{};
+	const  int maximumNumberOfSearches = 200;
+	float progressSpeed = static_cast<float>(1) / maximumNumberOfSearches;
 	
-	initializePath(seperateRegion(map), &startingProblemStation, &endProblemStation );
-	addRefuelStationIfFirstStationUnreachable(map, chemin);
 
-  //std::cout << std::endl << "Does if statisfy fuel usage = " << breitling_constraints::satisfiesFuelConstraints(m_dataset,chemin) << std::endl;
-  while (!doablePath || !pathLongEnough && !runtime->userInterupted)
+	do
 	{
-      runtime->currentProgress = chemin.size() / 100.f;
-			try
+		doablePath = false;
+		pathLongEnough = false;
+		validPath = false;
+
+		initializePath(seperateRegion(map), &startingProblemStation, &endProblemStation);
+		addRefuelStationIfFirstStationUnreachable(map, m_chemin);
+		//std::cout << std::endl << "Does if statisfy fuel usage = " << breitling_constraints::satisfiesFuelConstraints(m_dataset,chemin) << std::endl;
+		while (!(doablePath && pathLongEnough))
+		{
+
+			resetTestVariable();
+			//interface_mock::writePathToFile(map, transformToPath(chemin), "out.svg");
+			for (std::vector<const ProblemStation*>::iterator iteratorStation = m_chemin.begin(); iteratorStation != m_chemin.end() - 1 && m_chemin.size() < breitling_constraints::MINIMUM_STATION_COUNT /* && chemin.size() < 100 */; ++iteratorStation)
 			{
-				resetTestVariable();
-				//interface_mock::writePathToFile(map, transformToPath(chemin), "out.svg");
-				for (std::vector<const ProblemStation*>::iterator iteratorStation = chemin.begin(); iteratorStation != chemin.end() - 1 && chemin.size() < breitling_constraints::MINIMUM_STATION_COUNT /* && chemin.size() < 100 */; ++iteratorStation)
+
+				std::vector <ProblemStation*> selectionGroup = connectProblemStationsTogether(map, *iteratorStation[0], *iteratorStation[1], m_travel, false);
+				if (selectionGroup.empty())
 				{
-					
-            std::vector <ProblemStation*> selectionGroup = connectProblemStationsTogether(map, *iteratorStation[0], *iteratorStation[1], travel, false, &runtime->userInterupted);
-						if (selectionGroup.empty())
-						{
-              findIntermidiateRefillableStation(map, chemin, travel, &runtime->userInterupted);
-						}
-						for (ProblemStation* groupProblemStation : selectionGroup)
-						{
-							iteratorStation = chemin.insert(iteratorStation + 1, groupProblemStation);
-						}
-						if (chemin.size() >= breitling_constraints::MINIMUM_STATION_COUNT)
-						{
-							pathLongEnough = true;
-						}
+					findIntermidiateRefillableStation(map, m_chemin, m_travel);
 				}
-					
-				if (findProblematicProblemStation(chemin, travel) != chemin.size())
+				for (ProblemStation* groupProblemStation : selectionGroup)
 				{
-          findIntermidiateRefillableStation(map, chemin, travel, &runtime->userInterupted);
+					iteratorStation = m_chemin.insert(iteratorStation + 1, groupProblemStation);
+					/*	TestPath(chemin);*/
+					if (selectionGroup.size() > 2)
+					{
+
+					}
+
+
+
 				}
-					
+				if (m_chemin.size() >= breitling_constraints::MINIMUM_STATION_COUNT)
+				{
+					pathLongEnough = true;
+				}
+
 			}
-			catch (std::runtime_error error)
+
+			if (findProblematicProblemStation(m_chemin, m_travel) != m_chemin.size())
 			{
-				std::cout << error.what() << std::endl;
-				chemin.clear();
-				initializePath(seperateRegion(map), &startingProblemStation, &endProblemStation);
-				addRefuelStationIfFirstStationUnreachable(map, chemin);
+				findIntermidiateRefillableStation(map, m_chemin, m_travel);
 			}
-			///
-      if (breitling_constraints::satisfiesFuelConstraints(m_dataset,adaptProblemPath(chemin)) == true)
+			if (breitling_constraints::satisfiesFuelConstraints(m_dataset, adaptProblemPath(m_chemin)) == true)
 			{
 				doablePath = true;
 			}
 			else
-			{	
-        findIntermidiateRefillableStation(map, chemin, travel, &runtime->userInterupted);
+			{
+				doablePath = false;
+				findIntermidiateRefillableStation(map, m_chemin, m_travel);
 
-				if (chemin.size() >= breitling_constraints::MINIMUM_STATION_COUNT)
+				if (m_chemin.size() >= breitling_constraints::MINIMUM_STATION_COUNT)
 				{
-				
+
 					initializePath(seperateRegion(map), &startingProblemStation, &endProblemStation);
 				}
-				
-			}
-	}
 
-	//fillProblemStationToLimit(map, chemin);
+			}
+
+			//Protection system that check that the path has been changed if not hat means that there has been a problem with the number of disponible stations.
+			if (!hasThePathBeenChanged(comparePath))
+			{
+
+				//std::cout << "time? " << breitling_constraints::satisfiesTimeConstraints(breitlingData, path)
+
+				break;
+			}
+
+
+		}
+
+		validPath = breitling_constraints::satisfiesFuelConstraints(m_dataset, adaptProblemPath(m_chemin)) && breitling_constraints::satisfiesPathConstraints(map, m_dataset, adaptProblemPath(m_chemin)) && breitling_constraints::satisfiesRegionsConstraints(adaptProblemPath(m_chemin)) && breitling_constraints::satisfiesStationCountConstraints(adaptProblemPath(m_chemin));
+
+		currentSolution = adaptProblemPath(m_chemin);
+		if (bestSolution.empty())
+		{
+			bestSolution = currentSolution;
+		}else
+		if (getLength(currentSolution) / m_dataset.planeSpeed < getLength(bestSolution) / m_dataset.planeSpeed && validPath)
+		{
+			bestSolution = currentSolution;
+		}
+
+		runtime->foundSolutionCount = (getLength(bestSolution) / m_dataset.planeSpeed < 24);
+		runtime->discoveredSolutionCount += 1;
+		runtime->currentProgress += progressSpeed;
+		
+	std::cout << "Progress Bar : " << runtime->discoveredSolutionCount << " ---  " << "Time of solution : " << getLength(currentSolution) / m_dataset.planeSpeed << " ->  " << getLength(bestSolution) / m_dataset.planeSpeed << std::endl;
+
+	} while (runtime->currentProgress < 1 && runtime->foundSolutionCount != 1);
+		
 	
 	
-	//TestPath(chemin);
-	
-	//chemin.clear();
-	//initializePath(seperateRegion(map), &startingProblemStation, &endProblemStation);
-  return adaptProblemPath(chemin);
+	return bestSolution;
 }
 
 
@@ -287,27 +340,52 @@ std::vector<ProblemStation> OptimisationSolver::RefuelableStation(const ProblemM
 	//It is not necessary to look for reachble stations if the max distance that we can go is negatif 
 	if (maxDistanceOfTravel > 0)
 	{
-    for (const ProblemStation &point : map)
+		for (ProblemStation point : map)
 		{
 
 			timedistance_t distanceBetweenPoints = (geometry::distance(centerProblemStation.getLocation(), point.getLocation())) / m_dataset.planeSpeed;
 			//If the distance between the two point is smaller than the maximum travel distance
+			
 			if (distanceBetweenPoints < maxDistanceOfTravel) 
 			{
 				daytime_t timeAtArrival = geometry::distance(centerProblemStation.getLocation(), point.getLocation()) / m_dataset.planeSpeed;
+				bool nightTime = tools::isTimeInNightPeriod(travel.currentTime + timeAtArrival, m_dataset);
+				
 				//If there is a need for the station to be a station that can be used to refuel the plane
 				if (refuable)
 				{
+					
 					//We check that the station is a refuel point
 					if (point.canBeUsedToFuel())
 					{
-						reachablePoint.push_back(point);
+						if (nightTime)
+						{
+							if (point.isAccessibleAtNight())
+							{
+								reachablePoint.push_back(point);
+							}
+						}
+						else
+						{
+							reachablePoint.push_back(point);
+						}
+						
 					}
 				}
 				else
 				{
 					//We add it simply to the list
-					reachablePoint.push_back(point);
+					if (nightTime)
+					{
+						if (point.isAccessibleAtNight())
+						{
+							reachablePoint.push_back(point);
+						}
+					}
+					else
+					{
+						reachablePoint.push_back(point);
+					}
 				}
 			}
 
@@ -329,13 +407,12 @@ ProblemStation* OptimisationSolver::stationSelectionInReach(const ProblemMap& ma
 	//Iterate for each station in the reachable station to find witch station has the best closest to destinationProblemStation/farthest to startProblemStation ration. 
 	ProblemStation* SelectedProblemStation{};
 	bool ElementInPath = false;
-    timedistance_t ratio = std::numeric_limits<timedistance_t>::max();
+	timedistance_t ratio = DBL_MAX;
 	std::vector<ProblemStation> reachableProblemStations{};
 	Station* destinationStation = (Station*)destinationProblemStation.getOriginalStation();
 	timedistance_t calculatedRatio;
 	Location halfWayPoint = tools::findHalfWayCoordinates(startProblemStation.getLocation(), destinationProblemStation.getLocation());
 
-	
 	reachableProblemStations = RefuelableStation(map, startProblemStation, *travel,refuelable);
 	
 	//If there is no reachable station, there is no selection possible
@@ -366,7 +443,7 @@ ProblemStation* OptimisationSolver::stationSelectionInReach(const ProblemMap& ma
 					return SelectedProblemStation;
 				} 
 
-				if (calculatedRatio < ratio && tools::ProblemStationInPath(chemin, i) == false && tools::ProblemStationInProblemStationVector(skipList, i) == false)
+				if (calculatedRatio < ratio && tools::ProblemStationInPath(m_chemin, i) == false && tools::ProblemStationInProblemStationVector(skipList, i) == false)
 				{
 					SelectedProblemStation = new ProblemStation(i);
 					ratio = calculatedRatio;
@@ -390,27 +467,28 @@ Reset the travel variable
 */
 void OptimisationSolver::resetTestVariable()
 {
-	travel->flightDistance = 0;
-	travel->distanceSinceLastRefuel = 0;
-	travel->currentTime = m_dataset.departureTime;
+	m_travel->flightDistance = 0;
+	m_travel->distanceSinceLastRefuel = 0;
+	m_travel->currentTime = m_dataset.departureTime;
 }
 
 /*
 Finds the station which cannot be reached because the remaining fuel isn't sufficient and add a station that can be used to refuel the plane before the problematic station
 */
-void OptimisationSolver::findIntermidiateRefillableStation(const ProblemMap& map, const std::vector<const ProblemStation*> path, travel_variables * travel, bool *stopFlag)
+void OptimisationSolver::findIntermidiateRefillableStation(const ProblemMap& map, const std::vector<const ProblemStation*> path, travel_variables * travel)
 {
+	
+
+	//TestPath(chemin);
 	bool noMoreProblem = false;
 	travel_variables* voyage = travel;
 	do
 	{
 		//Pointe the iterator to the problematic station
-		std::vector< const ProblemStation*>::iterator stationIterator = chemin.begin() + findProblematicProblemStation(chemin, voyage);
+		std::vector< const ProblemStation*>::iterator stationIterator = m_chemin.begin() + findProblematicProblemStation(m_chemin, voyage);
 		//If the iterator points to the last station in the path, then there is no problem detected so there is no need to correct the station
-		if (stationIterator != chemin.end())
+		if (stationIterator != m_chemin.end())
 		{
-
-
 
 			do
 			{
@@ -419,17 +497,15 @@ void OptimisationSolver::findIntermidiateRefillableStation(const ProblemMap& map
 				stationIterator = stationIterator - 1;
 				updateTravelVariable(voyage, *stationIterator);
 			
-
 			} while (RefuelableStation(map, *stationIterator[0], *voyage,true).empty());
 
-
-      std::vector<ProblemStation* > groupOfProblemStation = connectProblemStationsTogether(map, *stationIterator[0], *stationIterator[1], voyage, true, stopFlag);
+			//We add the station(s)
+			std::vector<ProblemStation* > groupOfProblemStation = connectProblemStationsTogether(map, *stationIterator[0], *stationIterator[1], voyage, true);
 			for (ProblemStation* emergencyProblemStation : groupOfProblemStation)
 			{
-				stationIterator = chemin.insert(stationIterator + 1, emergencyProblemStation);
+				stationIterator = m_chemin.insert(stationIterator + 1, emergencyProblemStation);
 
 			}
-			TestPath(chemin);
 		}
 		else
 		{
@@ -438,17 +514,19 @@ void OptimisationSolver::findIntermidiateRefillableStation(const ProblemMap& map
 
 
 
-  } while (!noMoreProblem && !*stopFlag);
+	} while (!noMoreProblem);
+	//TestPath(chemin);
 
 }
 
-Path OptimisationSolver::transformToPath(std::vector<const ProblemStation*> path)
+//Transform a <const ProblemStation*> vector into a Path
+Path OptimisationSolver::transformToPath(ProblemPath path)
 {
 	Path trajet{};
 
-	for (const ProblemStation *iterator : path)
+	for ( ProblemStation iterator : path)
 	{
-		trajet.getStations().emplace_back(iterator->getOriginalStation());
+		trajet.getStations().emplace_back(iterator.getOriginalStation());
 	}
 	return trajet;
 }
@@ -462,6 +540,7 @@ void OptimisationSolver::addRefuelStationIfFirstStationUnreachable(const Problem
 	//Max travel time with the current remaining fuel
 	double maxTimeTravel =0;
 	std::vector<ProblemStation*> skip{};
+	
 
 	do
 	{
@@ -477,6 +556,38 @@ void OptimisationSolver::addRefuelStationIfFirstStationUnreachable(const Problem
 	
 }
 
+bool OptimisationSolver::hasThePathBeenChanged(std::vector<const ProblemStation*> *path)
+{
+	
+	if ( m_chemin.size() != path->size())
+	{
+		copyPathToObject(path);
+		return true;
+		
+	}
+	for (size_t index = 0; index < path->size(); ++index)
+	{
+		std::vector<const ProblemStation*> compareStation = *path;
+		if (m_chemin[index]->getOriginalStation()->getName() != compareStation[index]->getOriginalStation()->getName())
+		{
+			copyPathToObject(path);
+			return true;
+			
+		}
+	}
+	
+	return false;
+}
+
+void OptimisationSolver::copyPathToObject(std::vector<const ProblemStation*> *copy)
+{
+	copy->clear();
+	for (const ProblemStation* stations : m_chemin)
+	{
+		copy->emplace_back(stations);
+	}
+}
+
 
 
 
@@ -486,7 +597,7 @@ void OptimisationSolver::updateTravelVariable(travel_variables* travel, const Pr
 {
 	bool reachedSelectedProblemStation = false;
 	travel->flightDistance = 0;
-	for (std::vector<const ProblemStation*>::iterator iteratorProblemStation = chemin.begin() + 1; iteratorProblemStation != chemin.end() && !reachedSelectedProblemStation; ++iteratorProblemStation)
+	for (std::vector<const ProblemStation*>::iterator iteratorProblemStation = m_chemin.begin() + 1; iteratorProblemStation != m_chemin.end() && !reachedSelectedProblemStation; ++iteratorProblemStation)
 	{
 		travel->flightDistance = geometry::distance(iteratorProblemStation[-1]->getLocation(), iteratorProblemStation[0]->getLocation());
 		travel->currentTime = m_dataset.departureTime + travel->flightDistance / m_dataset.planeSpeed;
@@ -504,7 +615,10 @@ void OptimisationSolver::updateTravelVariable(travel_variables* travel, const Pr
 	travel->currentTime = m_dataset.departureTime + travel->flightDistance / m_dataset.planeSpeed;
 }
 
-std::vector<ProblemStation*> OptimisationSolver::connectProblemStationsTogether(const ProblemMap& map, const ProblemStation& startProblemStation, const ProblemStation& endProblemStation, travel_variables* travel, bool refuelable, bool *stopFlag)
+/*Connect 2 distants points in a path
+The connection return the stations between 0 to n stations between the two points : 0 if there is no station that can connect the two points or else n stations that connect the 2 points
+*/
+std::vector<ProblemStation*> OptimisationSolver::connectProblemStationsTogether(const ProblemMap& map, const ProblemStation& startProblemStation, const ProblemStation& endProblemStation, travel_variables* travel, bool refuelable)
 {
 	
 	std::vector<ProblemStation*> resultProblemStation;
@@ -514,6 +628,7 @@ std::vector<ProblemStation*> OptimisationSolver::connectProblemStationsTogether(
 	const Station* endStation = endProblemStation.getOriginalStation();
 	bool elementAdded = false;
 	bool firstElementAdded = false;
+	bool errorPassage = false;
 	
 	
 	// At everypassage, we add a new station even if the next station is in reach
@@ -531,12 +646,24 @@ std::vector<ProblemStation*> OptimisationSolver::connectProblemStationsTogether(
 		SelectedProblemStation = stationSelectionInReach(map, *currentProblemStation, endProblemStation, skipList, travel, refuelable);
 		if (nullptr == SelectedProblemStation)
 		{
-			return std::vector<ProblemStation*>();
+			if (resultProblemStation.empty() || (errorPassage && resultProblemStation.empty()))
+			{
+				return std::vector<ProblemStation*>();
+			}
+			else
+			{
+				errorPassage = true;
+				skipList.emplace_back(resultProblemStation[0]);
+				SelectedProblemStation = (ProblemStation*)&startProblemStation;
+			}
+			
+			
 		}
-		
+		errorPassage = false;
 		nauticmiles_t currentDistance = geometry::distance(currentProblemStation->getLocation(), SelectedProblemStation->getLocation());
 		travel->flightDistance = travel->flightDistance  + currentDistance;
-		travel->currentTime = m_dataset.departureTime + travel->flightDistance / m_dataset.planeSpeed;
+		//travel->currentTime = m_dataset.departureTime + travel->flightDistance / m_dataset.planeSpeed;
+		travel->currentTime = fmod(m_dataset.departureTime + travel->flightDistance / m_dataset.planeSpeed,24.f);
 		if (!SelectedProblemStation->canBeUsedToFuel())
 		{
 			travel->distanceSinceLastRefuel = travel->distanceSinceLastRefuel + currentDistance;
@@ -581,6 +708,15 @@ std::vector<ProblemStation*> OptimisationSolver::connectProblemStationsTogether(
 			currentProblemStation = SelectedProblemStation;
 			elementAdded = false;
 			refuelable = false;
+			//We cannot add this station that are already in the connexion vector
+			for(ProblemStation *  i : resultProblemStation)
+			{
+				skipList.emplace_back(i);
+			}
+			/*if (resultProblemStation.size() == 3)
+			{
+				std::cout << "Night" << std::endl;
+			}*/
 			
 		}
 	
@@ -603,9 +739,9 @@ size_t  OptimisationSolver::findProblematicProblemStation(std::vector<const Prob
 
 	nauticmiles_t currentDistance = 0;
 	nauticmiles_t distanceSinceLastRefuel = 0;
-	for (size_t i = 1; i < chemin.size(); i++) {
-		const ProblemStation* station = chemin[i];
-		nauticmiles_t flightDistance = geometry::distance(chemin[i - 1]->getLocation(), station->getLocation());
+	for (size_t i = 1; i < m_chemin.size(); i++) {
+		const ProblemStation* station = m_chemin[i];
+		nauticmiles_t flightDistance = geometry::distance(m_chemin[i - 1]->getLocation(), station->getLocation());
 		currentDistance += flightDistance;
 		distanceSinceLastRefuel += flightDistance;
 		daytime_t currentTime = m_dataset.departureTime + currentDistance / m_dataset.planeSpeed;
@@ -629,7 +765,7 @@ size_t  OptimisationSolver::findProblematicProblemStation(std::vector<const Prob
 		
 	}
 
-	return chemin.size();
+	return  m_chemin.size();
 }
 
 
