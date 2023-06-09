@@ -1,8 +1,8 @@
 #include "excelhelper.h"
-#include <QAxObject>
 
 void ExcelHelper::loadExcelToTableWidget(QTableWidget* tableWidget, QString filePath)
 {
+    /*
     QAxObject excel("Excel.Application");
     excel.setProperty("Visible", false); // Set the Excel application to be invisible
 
@@ -115,6 +115,7 @@ void ExcelHelper::loadExcelToTableWidget(QTableWidget* tableWidget, QString file
     delete workbook;
     delete workbooks;
     excel.dynamicCall("Quit()");
+*/
 }
 
 void ExcelHelper::addSortingAndSearchingToTableWidget(QTableWidget* tableWidget)
@@ -165,6 +166,7 @@ void ExcelHelper::addSortingAndSearchingToTableWidget(QTableWidget* tableWidget)
 
 void ExcelHelper::displayColumnContentsInTableWidget(QTableWidget* tableWidget, QString filePath, QString columnName)
 {
+    /*
     QAxObject excel("Excel.Application");
     excel.setProperty("Visible", false);
 
@@ -266,5 +268,5 @@ void ExcelHelper::displayColumnContentsInTableWidget(QTableWidget* tableWidget, 
     delete workbook;
     delete workbooks;
     excel.dynamicCall("Quit()");
-
+*/
 }

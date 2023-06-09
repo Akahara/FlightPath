@@ -1,0 +1,5 @@
+<RCC>
+    <qresource prefix="/resources">
+        <file>resources/FicheDeNavigationModel.xlsx</file>
+    </qresource>
+</RCC>

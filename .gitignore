@@ -4,6 +4,7 @@
 *.vcxproj.user
 *.xls*
 !Solver/aerodromes.xlsx
+!*/resources/*
 *.svg
 **/packages/
 x64/
@@ -20,3 +21,4 @@ out/
 *.odt
 *.user*
 screens/
+build*
