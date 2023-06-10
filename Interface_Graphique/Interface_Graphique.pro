@@ -2,7 +2,11 @@ QT += core gui
 
 greaterThan(QT_MAJOR_VERSION, 4): QT += widgets
 
-CONFIG += c++20
+macos {
+    CONFIG += c++20 app_bundle
+} else {
+    CONFIG += c++20
+}
 
 # You can make your code fail to compile if it uses deprecated APIs.
 # In order to do so, uncomment the following line.
@@ -138,7 +142,8 @@ DISTFILES += \
     Solver/aerodromes.xlsx \
     Solver/vendor/OpenSXLSX_LICENSE.md \
     Solver/vendor/OpenXLSX/CMakeLists.txt \
-    Solver/vendor/OpenXLSX/OpenXLSXConfig.cmake
+    Solver/vendor/OpenXLSX/OpenXLSXConfig.cmake \
+    app.rc
 
 INCLUDEPATH += \
     Solver/vendor/OpenXLSX \
@@ -151,3 +156,11 @@ TARGET = FlightPath
 
 RESOURCES += \
     resourcesfiles.qrc
+
+# Add the icon depending on the OS
+macos {
+    ICON += resources/icon/icon.icns
+}
+win32 {
+    RC_FILE = myapp.rc
+}
