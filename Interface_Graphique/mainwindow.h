@@ -1,5 +1,5 @@
-#ifndef MAINWINDOWTEST_H
-#define MAINWINDOWTEST_H
+#ifndef MAINWINDOW_H
+#define MAINWINDOW_H
 
 #include <QMainWindow>
 
@@ -15,19 +15,19 @@
 #define BREITLING_INDEX 1
 
 QT_BEGIN_NAMESPACE
-namespace Ui { class MainWindowTest; }
+namespace Ui { class MainWindow; }
 QT_END_NAMESPACE
 
-class MainWindowTest : public QMainWindow
+class MainWindow : public QMainWindow
 {
     Q_OBJECT
 
 public:
-    explicit MainWindowTest(QWidget *parent = nullptr);
-    ~MainWindowTest();
+    explicit MainWindow(QWidget *parent = nullptr);
+    ~MainWindow();
 
 private:
-    Ui::MainWindowTest *ui;
+    Ui::MainWindow *ui;
 
     QString filePath;
     StationModel m_excelModel;
@@ -53,4 +53,4 @@ public slots:
     void runSolver();
 };
 
-#endif // MAINWINDOWTEST_H
+#endif // MAINWINDOW_H

@@ -1,5 +1,4 @@
-#include "dialogwindow.h"
-#include "mainwindowtest.h"
+#include "mainwindow.h"
 
 #include <QApplication>
 #include <QFile>
@@ -9,7 +8,7 @@ int main(int argc, char *argv[])
 {
     QApplication application(argc, argv);
 
-    MainWindowTest mainWindow;
+    MainWindow mainWindow;
     mainWindow.resize(400,250);
 
     // center the window

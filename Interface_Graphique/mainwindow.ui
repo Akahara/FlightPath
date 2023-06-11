@@ -1,13 +1,13 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <ui version="4.0">
- <class>MainWindowTest</class>
- <widget class="QMainWindow" name="MainWindowTest">
+ <class>MainWindow</class>
+ <widget class="QMainWindow" name="MainWindow">
   <property name="geometry">
    <rect>
     <x>0</x>
     <y>0</y>
     <width>1094</width>
-    <height>926</height>
+    <height>949</height>
    </rect>
   </property>
   <property name="sizePolicy">
@@ -1136,7 +1136,7 @@
      <x>0</x>
      <y>0</y>
      <width>1094</width>
-     <height>21</height>
+     <height>43</height>
     </rect>
    </property>
    <widget class="QMenu" name="menuFichier">

@@ -1,6 +1,6 @@
-#include "mainwindowtest.h"
+#include "mainwindow.h"
 #include "dialogwindow.h"
-#include "ui_mainwindowtest.h"
+#include "ui_mainwindow.h"
 
 #include <algorithm>
 #include <thread>
@@ -13,9 +13,9 @@
 #include "Solver/src/breitling/label_setting_breitling.h"
 #include "Solver/src/optimisation/optimisationSolver.h"
 
-MainWindowTest::MainWindowTest(QWidget *parent) :
+MainWindow::MainWindow(QWidget *parent) :
     QMainWindow(parent),
-    ui(new Ui::MainWindowTest)
+    ui(new Ui::MainWindow)
 {
     ui->setupUi(this);
 
@@ -51,13 +51,13 @@ MainWindowTest::MainWindowTest(QWidget *parent) :
     updateFieldsVisibility();
 }
 
-MainWindowTest::~MainWindowTest()
+MainWindow::~MainWindow()
 {
     delete ui;
 }
 
 
-void MainWindowTest::openFileDialog()
+void MainWindow::openFileDialog()
 {
     QString fileName = QFileDialog::getOpenFileName(this, "Ouvrir un fichier", QString(),
                                                     "(*.xls *.xlsx *.csv)");
@@ -71,7 +71,7 @@ void MainWindowTest::openFileDialog()
     updateFilterViews();
 }
 
-void MainWindowTest::saveFileDialog()
+void MainWindow::saveFileDialog()
 {
   if (filePath.isEmpty())
       return;
@@ -88,7 +88,7 @@ void MainWindowTest::saveFileDialog()
   }
 }
 
-void MainWindowTest::updateGeoMapFromFile()
+void MainWindow::updateGeoMapFromFile()
 {
     if (filePath.isEmpty())
         return;
@@ -119,11 +119,11 @@ void MainWindowTest::updateGeoMapFromFile()
     checkSolverCanBeRun();
 }
 
-void MainWindowTest::clickOnBoucle(int checkState) {
+void MainWindow::clickOnBoucle(int checkState) {
     checkDepArrBoucleValidity();
 }
 
-void MainWindowTest::updateFieldsVisibility() {
+void MainWindow::updateFieldsVisibility() {
     int index = ui->algoCombobox->currentIndex();
     ui->heures->setVisible(index == BREITLING_INDEX);
     ui->boucle->setVisible(index == TSP_INDEX);
@@ -137,7 +137,7 @@ void MainWindowTest::updateFieldsVisibility() {
     checkDepArrBoucleValidity();
 }
 
-void MainWindowTest::updateComboBoxDepArr() {
+void MainWindow::updateComboBoxDepArr() {
     ui->depComboBox->clear();
     ui->arrComboBox->clear();
 
@@ -152,7 +152,7 @@ void MainWindowTest::updateComboBoxDepArr() {
     }
 }
 
-void MainWindowTest::updateDepArrInfos() {
+void MainWindow::updateDepArrInfos() {
     checkDepArrBoucleValidity();
 
     // Get the selected stations
@@ -194,7 +194,7 @@ void MainWindowTest::updateDepArrInfos() {
     }
 }
 
-void MainWindowTest::checkDepArrBoucleValidity() {
+void MainWindow::checkDepArrBoucleValidity() {
     if (ui->algoCombobox->currentIndex() == TSP_INDEX) {
         if (ui->depComboBox->currentText() == "<aucun>" || ui->boucle->checkState() == Qt::Checked)
             ui->arriveeBoxWidget->setEnabled(false);
@@ -204,7 +204,7 @@ void MainWindowTest::checkDepArrBoucleValidity() {
 }
 
 template<typename AttributeGetter>
-void MainWindowTest::repopulateFilterMap(QMap<std::string, bool> &filterMap, AttributeGetter getter) {
+void MainWindow::repopulateFilterMap(QMap<std::string, bool> &filterMap, AttributeGetter getter) {
     // remove entries which are no longer used
     filterMap.removeIf([this,&getter](const std::pair<std::string,bool> &p) {
       return std::find_if(m_excelModel.getStations().begin(), m_excelModel.getStations().end(),
@@ -221,7 +221,7 @@ void MainWindowTest::repopulateFilterMap(QMap<std::string, bool> &filterMap, Att
     }
 }
 
-void MainWindowTest::updateFilterViews() {
+void MainWindow::updateFilterViews() {
     QMap<std::string, bool> fuelMap = m_fuelModel.getFuels();
     QMap<std::string, bool> statusMap = m_statusModel.getStatuses();
     QMap<std::string, bool> nightFlightMap = m_nightFlightModel.getStatuses();
@@ -237,13 +237,13 @@ void MainWindowTest::updateFilterViews() {
     m_nightFlightModel.setStatuses(nightFlightMap);
 }
 
-void MainWindowTest::excelTableViewChanged() {
+void MainWindow::excelTableViewChanged() {
     updateComboBoxDepArr();
     updateFilterViews();
     updateDepArrInfos();
 }
 
-void MainWindowTest::checkSolverCanBeRun()
+void MainWindow::checkSolverCanBeRun()
 {
     ui->computeButton->setEnabled(true);
     if(m_excelModel.getStations().isEmpty()) {
@@ -265,7 +265,7 @@ static inline daytime_t controlsToDaytime(const QSpinBox *hoursSpinbox, const QS
         (minutesSpinBox==nullptr ? 0 : minutesSpinBox->value()/60.f);
 }
 
-void MainWindowTest::runSolver() {
+void MainWindow::runSolver() {
   SolverRuntime *runtime = new SolverRuntime{};
   ProblemPath *finalPath = new ProblemPath{};
   ProblemMap *problemMap = new ProblemMap{};

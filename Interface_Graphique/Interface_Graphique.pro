@@ -50,7 +50,7 @@ SOURCES += \
     dialogwindow.cpp \
     excelhelper.cpp \
     main.cpp \
-    mainwindowtest.cpp
+    mainwindow.cpp
 
 HEADERS += \
     Solver/src/breitling/breitlingSolver.h \
@@ -123,14 +123,14 @@ HEADERS += \
     dialogwindow.h \
     excelhelper.h \
     fuelmodel.h \
-    mainwindowtest.h \
+    mainwindow.h \
     nightflightmodel.h \
     stationmodel.h \
     statusmodel.h
 
 FORMS += \
     dialogwindow.ui \
-    mainwindowtest.ui
+    mainwindow.ui
 
 # Default rules for deployment.
 qnx: target.path = /tmp/$${TARGET}/bin
